@@ -17,6 +17,8 @@
 # v1.0.1  2023.03.20 - Louis GAMBART - Add colors to the script output
 # v1.0.2  2023.03.20 - Louis GAMBART - Add comments to the functions
 # v1.0.3  2023.03.20 - Louis GAMBART - Code cleaning
+# v1.0.4  2023.03.20 - Louis GAMBART - Add checks for root user
+# v1.0.5  2023.03.20 - Louis GAMBART - Add check for service before creation/removal
 #
 #==========================================================================================
 
