@@ -71,7 +71,7 @@ This project is a manager for Nginx reverse proxy. It allows you to manage your 
 
 ### Built With
 
-* [[Bash][Bash-shield][Bash-url]]
+* [![Bash][Bash-shield][Bash-url]]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
