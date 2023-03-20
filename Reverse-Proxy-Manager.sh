@@ -123,6 +123,7 @@ remove_service () {
 
     # remove conf file and log dir
     rm $NGINX_CONF_DIR/"$1".conf
+    # shellcheck disable=SC2115
     rm -rf $NGINX_VAR_DIR/"$1"
 
     echo -e "${Green}Service $1 removed from reverse proxy${No_Color}"
