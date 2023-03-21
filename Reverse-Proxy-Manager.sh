@@ -5,7 +5,7 @@
 #
 # AUTHOR             :     Louis GAMBART
 # CREATION DATE      :     2023.03.20
-# RELEASE            :     v1.2.0
+# RELEASE            :     v1.2.3
 # USAGE SYNTAX       :     .\Reverse-Proxy-Manager.sh
 #
 # SCRIPT DESCRIPTION :     This script is used to manage a reverse proxy configuration for nginx
@@ -28,6 +28,8 @@
 # v1.1.3  2023.03.21 - Louis GAMBART - Add check for nginx private key
 # v1.2.0  2023.03.21 - Louis GAMBART - Add installing option to nginx check
 # v1.2.1  2023.03.21 - Louis GAMBART - Add apt update when installing nginx
+# v1.2.2  2023.03.21 - Louis GAMBART - Fix nginx installation (txt + color in read command)
+# v1.2.3  2023.03.21 - Louis GAMBART - Add exit when no services are found for remove and list options
 #
 #==========================================================================================
 
@@ -133,7 +135,7 @@ remove_service () {
     # check if service exists
     if [ ! -f $NGINX_CONF_DIR/"$1".conf ]; then
         echo -e "${Red}Service does not exist${No_Color}"
-        exit
+        return
     fi
 
     # remove conf file and log dir
@@ -152,6 +154,10 @@ list_services () {
     # List all services in the reverse proxy
 
     for file in "$NGINX_CONF_DIR"/*.conf; do
+        if [ ! -f "$file" ]; then
+            echo -e "${Red}No services found${No_Color}"
+            exit
+        fi
         echo -e "${Green}$(basename "$file" .conf)${No_Color}"
         server_ip=$(grep -oP '(?<=proxy_pass ).*(?=;)' "$file")
         echo -e "  IP: ${Green}$server_ip${No_Color}"
@@ -255,7 +261,7 @@ select option in "Add service" "Remove service" "List services" "Exit"; do
             #list services
             echo -e "${Yellow}Listing services...${No_Color}"
             echo ""
-            find $NGINX_CONF_DIR -type f -name "*.conf" -exec basename {} .conf \; | sed 's/.conf//g'
+            list_services
             echo ""
             read -r -p "Enter server name to remove: " server_name
             remove_service "$server_name"
