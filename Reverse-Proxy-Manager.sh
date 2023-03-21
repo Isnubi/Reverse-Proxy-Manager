@@ -5,7 +5,7 @@
 #
 # AUTHOR             :     Louis GAMBART
 # CREATION DATE      :     2023.03.20
-# RELEASE            :     v1.2.3
+# RELEASE            :     v1.2.4
 # USAGE SYNTAX       :     .\Reverse-Proxy-Manager.sh
 #
 # SCRIPT DESCRIPTION :     This script is used to manage a reverse proxy configuration for nginx
@@ -30,6 +30,7 @@
 # v1.2.1  2023.03.21 - Louis GAMBART - Add apt update when installing nginx
 # v1.2.2  2023.03.21 - Louis GAMBART - Fix nginx installation (txt + color in read command)
 # v1.2.3  2023.03.21 - Louis GAMBART - Add exit when no services are found for remove and list options
+# v1.2.4  2023.03.21 - Louis GAMBART - Add check to avoid duplicate services
 #
 #==========================================================================================
 
@@ -165,6 +166,19 @@ list_services () {
 }
 
 
+check_service () {
+    # Check if a service is already in the reverse proxy
+    # :param $1: service name
+    # :return: 0 if exists, 1 if not
+
+    if [ -f $NGINX_CONF_DIR/"$1".conf ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+
 install_nginx () {
     # Install nginx and generate a self-signed certificate
 
@@ -251,6 +265,10 @@ select option in "Add service" "Remove service" "List services" "Exit"; do
     case $option in
         "Add service")
             read -r -p "Enter server name like service.clubnix.fr: " server_name
+            if check_service "$server_name"; then
+                echo -e "${Red}Service already exists${No_Color}"
+                break
+            fi
             read -r -p "Enter IP address of the server and the port if necessary: " server_ip
             read -r -p "Enter the service name: " service_name
             read -r -p "Is the service a https service? [y/n]: " https
