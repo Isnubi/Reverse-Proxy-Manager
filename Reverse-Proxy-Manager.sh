@@ -5,7 +5,7 @@
 #
 # AUTHOR             :     Louis GAMBART
 # CREATION DATE      :     2023.03.20
-# RELEASE            :     v1.2.4
+# RELEASE            :     v1.2.5
 # USAGE SYNTAX       :     .\Reverse-Proxy-Manager.sh
 #
 # SCRIPT DESCRIPTION :     This script is used to manage a reverse proxy configuration for nginx
@@ -31,6 +31,7 @@
 # v1.2.2  2023.03.21 - Louis GAMBART - Fix nginx installation (txt + color in read command)
 # v1.2.3  2023.03.21 - Louis GAMBART - Add exit when no services are found for remove and list options
 # v1.2.4  2023.03.21 - Louis GAMBART - Add check to avoid duplicate services
+# v1.2.5  2023.03.22 - Louis GAMBART - Add subjects for ssl certificate generation
 #
 #==========================================================================================
 
@@ -58,6 +59,7 @@ NGINX_VAR_DIR="/var/log/nginx"
 NGINX_SSL_DIR="/etc/nginx/certs"
 NGINX_CERT="/etc/nginx/certs/certificat.crt"
 NGINX_KEY="/etc/nginx/certs/certificat.key"
+SSL_SUBJECTS=f"/C=FR/ST=FRANCE/L=NOISY-LE-GRAND/O=ESIEE-PARIS/OU=CLUB-NIX/CN={$(hostname -I | cut -d' ' -f1)}"
 
 
 #####################
@@ -187,7 +189,7 @@ install_nginx () {
     apt install nginx openssl -y
     echo -e "${Yellow}Generating SSL certificate...${No_Color}"
     mkdir -p "$NGINX_SSL_DIR"
-    openssl req -x509 -sha256 -days 365 -newkey rsa:4096 -keyout "$NGINX_KEY" -out "$NGINX_CERT" -nodes
+    openssl req -x509 -sha256 -days 365 -newkey rsa:4096 -keyout "$NGINX_KEY" -out "$NGINX_CERT" -nodes -subj "$SSL_SUBJECTS"
     echo -e "${Yellow}Deactivate nginx default configuration...${No_Color}"
     rm /etc/nginx/sites-enabled/default
     echo -e "${Yellow}Restarting nginx...${No_Color}"
