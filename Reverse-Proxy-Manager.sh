@@ -5,7 +5,7 @@
 #
 # AUTHOR             :     Louis GAMBART
 # CREATION DATE      :     2023.03.20
-# RELEASE            :     v1.2.5
+# RELEASE            :     v1.2.6
 # USAGE SYNTAX       :     .\Reverse-Proxy-Manager.sh
 #
 # SCRIPT DESCRIPTION :     This script is used to manage a reverse proxy configuration for nginx
@@ -32,6 +32,7 @@
 # v1.2.3  2023.03.21 - Louis GAMBART - Add exit when no services are found for remove and list options
 # v1.2.4  2023.03.21 - Louis GAMBART - Add check to avoid duplicate services
 # v1.2.5  2023.03.22 - Louis GAMBART - Add subjects for ssl certificate generation
+# v1.2.6  2023.03.22 - Louis GAMBART - Add confirmation before removing a service and fix SC2115 error
 #
 #==========================================================================================
 
@@ -141,15 +142,23 @@ remove_service () {
         return
     fi
 
-    # remove conf file and log dir
-    rm $NGINX_CONF_DIR/"$1".conf
-    # shellcheck disable=SC2115
-    rm -rf $NGINX_VAR_DIR/"$1"
+    echo -e "${Yellow}You are about to remove the service $1 from the reverse proxy${No_Color}"
+    read -r -p "Are you sure? [y/n] " removal_confirmation
+    if [ "$removal_confirmation" = 'y' ]; then
+        rm -rf "${NGINX_CONF_DIR:?}/$1".conf
+        rm -rf "${NGINX_VAR_DIR:?}/$1"
 
-    echo -e "${Green}Service $1 removed from reverse proxy${No_Color}"
-    echo -e "${Yellow}Restarting nginx...${No_Color}"
-    systemctl restart nginx
-    echo -e "${Green}Done!${No_Color}"
+        echo -e "${Green}Service $1 removed from reverse proxy${No_Color}"
+        echo -e "${Yellow}Restarting nginx...${No_Color}"
+        systemctl restart nginx
+        echo -e "${Green}Done!${No_Color}"
+    elif [ "$removal_confirmation" = 'n' ]; then
+        echo -e "${Green}Service $1 not removed from reverse proxy${No_Color}"
+        return
+    else
+        echo -e "${Red}Invalid input${No_Color}"
+        return
+    fi
 }
 
 
