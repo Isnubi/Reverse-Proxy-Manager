@@ -24,6 +24,7 @@
 # v1.0.8  2023.03.21 - Louis GAMBART - Add list services function and list option
 # v1.1.0  2023.03.21 - Louis GAMBART - Add -r option to read command to avoid backslash interpretation following SC2162
 # v1.1.1  2023.03.21 - Louis GAMBART - Usage of find instead of ls to list services following SC2012
+# v1.1.2  2023.03.21 - Louis GAMBART - Add bad input option for https check
 #
 #==========================================================================================
 
@@ -76,6 +77,9 @@ add_service () {
         service_type="https"
     elif [ "$4" = 'n' ]; then
         service_type="http"
+    else
+        echo -e "${Red}Invalid input${No_Color}"
+        exit
     fi
 
     # create log dir
