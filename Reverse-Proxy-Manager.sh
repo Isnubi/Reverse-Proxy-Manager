@@ -19,6 +19,7 @@
 # v1.0.3  2023.03.20 - Louis GAMBART - Code cleaning
 # v1.0.4  2023.03.20 - Louis GAMBART - Add checks for root user
 # v1.0.5  2023.03.20 - Louis GAMBART - Add check for service before creation/removal
+# v1.0.6  2023.03.20 - Louis GAMBART - Add check for nginx and test paths
 #
 #==========================================================================================
 
@@ -142,16 +143,48 @@ remove_service () {
 #####################
 
 if [ "$(id -u)" -ne 0 ]; then
-  echo -e "${Red}Please run as root${No_Color}"
-  exit
+    echo -e "${Red}Please run as root${No_Color}"
+    exit
 fi
 
 
 #####################
 #                   #
-#  V - MAIN SCRIPT  #
+#  V - NGINX CHECK  #
 #                   #
 #####################
+
+if [ ! -f /etc/nginx/nginx.conf ]; then
+    echo -e "${Red}Nginx is not installed${No_Color}"
+    exit
+fi
+
+
+#####################
+#                   #
+#  VI - TEST PATHS  #
+#                   #
+#####################
+
+if [ ! -d $NGINX_CONF_DIR ]; then
+    echo -e "${Red}Nginx conf dir does not exist${No_Color}"
+    exit
+fi
+if [ ! -d $NGINX_VAR_DIR ]; then
+    echo -e "${Red}Nginx log dir does not exist${No_Color}"
+    exit
+fi
+if [ ! -f $NGINX_CERT ]; then
+    echo -e "${Red}Nginx certificate does not exist${No_Color}"
+    exit
+fi
+
+
+#######################
+#                     #
+#  VII - MAIN SCRIPT  #
+#                     #
+#######################
 
 PS3='Please enter your choice: '
 select option in "Add service" "Remove service" "Exit"; do
