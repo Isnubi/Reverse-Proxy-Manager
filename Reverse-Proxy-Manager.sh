@@ -26,7 +26,8 @@
 # v1.1.1  2023.03.21 - Louis GAMBART - Usage of find instead of ls to list services following SC2012
 # v1.1.2  2023.03.21 - Louis GAMBART - Add bad input option for https check
 # v1.1.3  2023.03.21 - Louis GAMBART - Add check for nginx private key
-# V1.2.0  2023.03.21 - Louis GAMBART - Add installing option to nginx check
+# v1.2.0  2023.03.21 - Louis GAMBART - Add installing option to nginx check
+# v1.2.1  2023.03.21 - Louis GAMBART - Add apt update when installing nginx
 #
 #==========================================================================================
 
@@ -162,6 +163,7 @@ install_nginx () {
     # Install nginx and generate a self-signed certificate
 
     echo -e "${Yellow}Installing nginx...${No_Color}"
+    apt update
     apt install nginx openssl -y
     echo -e "${Yellow}Generating SSL certificate...${No_Color}"
     mkdir -p "$NGINX_SSL_DIR"
