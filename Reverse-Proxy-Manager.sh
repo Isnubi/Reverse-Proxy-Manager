@@ -195,10 +195,10 @@ fi
 
 if ! nginx -v > /dev/null 2>&1; then
     echo -e "${Red}Nginx is not installed${No_Color}"
-    read -r -p "${Yellow}Is the service a https service?${No_Color} [y/n]: " install_nginx
+    read -r -p "Do you want to install nginx? [y/n]: " install_nginx
     if [ "$install_nginx" = 'y' ]; then
         install_nginx
-        echo -e "${Green}Nginx installed${No_Color}. You can now run this script again."
+        echo -e "${Green}Nginx installed. You can now run this script again.${No_Color}"
         exit
     elif [ "$install_nginx" = 'n' ]; then
         echo -e "${Red}Nginx is required to run this script${No_Color}"
