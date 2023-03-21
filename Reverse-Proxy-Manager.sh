@@ -5,7 +5,7 @@
 #
 # AUTHOR             :     Louis GAMBART
 # CREATION DATE      :     2023.03.20
-# RELEASE            :     v1.0.3
+# RELEASE            :     v1.1.1
 # USAGE SYNTAX       :     .\Reverse-Proxy-Manager.sh
 #
 # SCRIPT DESCRIPTION :     This script is used to manage a reverse proxy configuration for nginx
@@ -20,7 +20,10 @@
 # v1.0.4  2023.03.20 - Louis GAMBART - Add checks for root user
 # v1.0.5  2023.03.20 - Louis GAMBART - Add check for service before creation/removal
 # v1.0.6  2023.03.20 - Louis GAMBART - Add check for nginx and test paths
-# v1.0.7  2023.03.20 - Louis GAMBART - Correct https check
+# v1.0.7  2023.03.21 - Louis GAMBART - Correct https check
+# v1.0.8  2023.03.21 - Louis GAMBART - Add list services function and list option
+# v1.1.0  2023.03.21 - Louis GAMBART - Add -r option to read command to avoid backslash interpretation following SC2162
+# v1.1.1  2023.03.21 - Louis GAMBART - Usage of find instead of ls to list services following SC2012
 #
 #==========================================================================================
 
@@ -137,6 +140,17 @@ remove_service () {
 }
 
 
+list_services () {
+    # List all services in the reverse proxy
+
+    for file in "$NGINX_CONF_DIR"/*.conf; do
+        echo -e "${Green}$(basename "$file" .conf)${No_Color}"
+        server_ip=$(grep -oP '(?<=proxy_pass ).*(?=;)' "$file")
+        echo -e "  IP: ${Green}$server_ip${No_Color}"
+    done
+}
+
+
 #####################
 #                   #
 #  IV - ROOT CHECK  #
@@ -188,24 +202,31 @@ fi
 #######################
 
 PS3='Please enter your choice: '
-select option in "Add service" "Remove service" "Exit"; do
+select option in "Add service" "Remove service" "List services" "Exit"; do
     case $option in
         "Add service")
-            read -p "Enter server name like service.clubnix.fr: " server_name
-            read -p "Enter IP address of the server and the port if necessary: " server_ip
-            read -p "Enter the service name: " service_name
-            read -p "Is the service a https service? [y/n]: " https
+            read -r -p "Enter server name like service.clubnix.fr: " server_name
+            read -r -p "Enter IP address of the server and the port if necessary: " server_ip
+            read -r -p "Enter the service name: " service_name
+            read -r -p "Is the service a https service? [y/n]: " https
             add_service "$service_name" "$server_name" "$server_ip" "$https"
             break
             ;;
         "Remove service")
             #list services
-            echo "List of services:"
+            echo -e "${Yellow}Listing services...${No_Color}"
             echo ""
-            ls $NGINX_CONF_DIR | sed 's/.conf//g'
+            find $NGINX_CONF_DIR -type f -name "*.conf" -exec basename {} .conf \; | sed 's/.conf//g'
             echo ""
-            read -p "Enter server name to remove: " server_name
+            read -r -p "Enter server name to remove: " server_name
             remove_service "$server_name"
+            break
+            ;;
+        "List services")
+            echo -e "${Yellow}Listing services...${No_Color}"
+            echo ""
+            list_services
+            echo ""
             break
             ;;
         "Exit")
