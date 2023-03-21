@@ -20,6 +20,7 @@
 # v1.0.4  2023.03.20 - Louis GAMBART - Add checks for root user
 # v1.0.5  2023.03.20 - Louis GAMBART - Add check for service before creation/removal
 # v1.0.6  2023.03.20 - Louis GAMBART - Add check for nginx and test paths
+# v1.0.7  2023.03.20 - Louis GAMBART - Correct https check
 #
 #==========================================================================================
 
@@ -68,9 +69,9 @@ add_service () {
     fi
 
     # check if https
-    if [ "$4" = true ]; then
+    if [ "$4" = 'y' ]; then
         service_type="https"
-    else
+    elif [ "$4" = 'n' ]; then
         service_type="http"
     fi
 
