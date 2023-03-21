@@ -5,7 +5,7 @@
 #
 # AUTHOR             :     Louis GAMBART
 # CREATION DATE      :     2023.03.20
-# RELEASE            :     v1.1.3
+# RELEASE            :     v1.2.0
 # USAGE SYNTAX       :     .\Reverse-Proxy-Manager.sh
 #
 # SCRIPT DESCRIPTION :     This script is used to manage a reverse proxy configuration for nginx
@@ -26,6 +26,7 @@
 # v1.1.1  2023.03.21 - Louis GAMBART - Usage of find instead of ls to list services following SC2012
 # v1.1.2  2023.03.21 - Louis GAMBART - Add bad input option for https check
 # v1.1.3  2023.03.21 - Louis GAMBART - Add check for nginx private key
+# V1.2.0  2023.03.21 - Louis GAMBART - Add installing option to nginx check
 #
 #==========================================================================================
 
@@ -50,6 +51,7 @@ Green='\033[0;32m '     # Green
 
 NGINX_CONF_DIR="/etc/nginx/conf.d"
 NGINX_VAR_DIR="/var/log/nginx"
+NGINX_SSL_DIR="/etc/nginx/certs"
 NGINX_CERT="/etc/nginx/certs/certificat.crt"
 NGINX_KEY="/etc/nginx/certs/certificat.key"
 
@@ -156,6 +158,21 @@ list_services () {
 }
 
 
+install_nginx () {
+    # Install nginx and generate a self-signed certificate
+
+    echo -e "${Yellow}Installing nginx...${No_Color}"
+    apt install nginx openssl -y
+    echo -e "${Yellow}Generating SSL certificate...${No_Color}"
+    mkdir -p "$NGINX_SSL_DIR"
+    openssl req -x509 -sha256 -days 365 -newkey rsa:4096 -keyout "$NGINX_KEY" -out "$NGINX_CERT" -nodes
+    echo -e "${Yellow}Deactivate nginx default configuration...${No_Color}"
+    rm /etc/nginx/sites-enabled/default
+    echo -e "${Yellow}Restarting nginx...${No_Color}"
+    systemctl restart nginx
+}
+
+
 #####################
 #                   #
 #  IV - ROOT CHECK  #
@@ -174,9 +191,20 @@ fi
 #                   #
 #####################
 
-if [ ! -f /etc/nginx/nginx.conf ]; then
+if ! nginx -v > /dev/null 2>&1; then
     echo -e "${Red}Nginx is not installed${No_Color}"
-    exit
+    read -r -p "${Yellow}Is the service a https service?${No_Color} [y/n]: " install_nginx
+    if [ "$install_nginx" = 'y' ]; then
+        install_nginx
+        echo -e "${Green}Nginx installed${No_Color}. You can now run this script again."
+        exit
+    elif [ "$install_nginx" = 'n' ]; then
+        echo -e "${Red}Nginx is required to run this script${No_Color}"
+        exit
+    else
+        echo -e "${Red}Invalid input${No_Color}"
+        exit
+    fi
 fi
 
 
