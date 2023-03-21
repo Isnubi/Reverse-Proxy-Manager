@@ -5,7 +5,7 @@
 #
 # AUTHOR             :     Louis GAMBART
 # CREATION DATE      :     2023.03.20
-# RELEASE            :     v1.1.1
+# RELEASE            :     v1.1.3
 # USAGE SYNTAX       :     .\Reverse-Proxy-Manager.sh
 #
 # SCRIPT DESCRIPTION :     This script is used to manage a reverse proxy configuration for nginx
@@ -25,6 +25,7 @@
 # v1.1.0  2023.03.21 - Louis GAMBART - Add -r option to read command to avoid backslash interpretation following SC2162
 # v1.1.1  2023.03.21 - Louis GAMBART - Usage of find instead of ls to list services following SC2012
 # v1.1.2  2023.03.21 - Louis GAMBART - Add bad input option for https check
+# v1.1.3  2023.03.21 - Louis GAMBART - Add check for nginx private key
 #
 #==========================================================================================
 
@@ -191,6 +192,10 @@ if [ ! -d $NGINX_CONF_DIR ]; then
 fi
 if [ ! -d $NGINX_VAR_DIR ]; then
     echo -e "${Red}Nginx log dir does not exist${No_Color}"
+    exit
+fi
+if [ ! -f $NGINX_KEY ]; then
+    echo -e "${Red}Nginx key does not exist${No_Color}"
     exit
 fi
 if [ ! -f $NGINX_CERT ]; then
