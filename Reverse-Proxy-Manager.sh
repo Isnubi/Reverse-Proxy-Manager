@@ -5,7 +5,7 @@
 #
 # AUTHOR             :     Louis GAMBART
 # CREATION DATE      :     2023.03.20
-# RELEASE            :     v1.2.6
+# RELEASE            :     v1.3.0
 # USAGE SYNTAX       :     .\Reverse-Proxy-Manager.sh
 #
 # SCRIPT DESCRIPTION :     This script is used to manage a reverse proxy configuration for nginx
@@ -33,6 +33,7 @@
 # v1.2.4  2023.03.21 - Louis GAMBART - Add check to avoid duplicate services
 # v1.2.5  2023.03.22 - Louis GAMBART - Add subjects for ssl certificate generation
 # v1.2.6  2023.03.22 - Louis GAMBART - Add confirmation before removing a service and fix SC2115 error
+# v1.3.0  2023.03.22 - Louis GAMBART - Add IP address check for service creation (ip and port)
 #
 #==========================================================================================
 
@@ -206,6 +207,30 @@ install_nginx () {
 }
 
 
+address_check () {
+    # Check if the address is valid
+    # :param $1: address
+    # :return: 0 if valid, 1 if not
+
+    #check if : in $1
+    if [[ $1 =~ .*":".* ]]; then
+        address=${1%:*}
+        port=${1#*:}
+        if [[ "$address" =~ ^(([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))\.){3}([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))$ ]] && [[ "$port" -ge 0 ]] && [[ "$port" -le 65536 ]]; then
+            return 0
+        else
+            return 1
+        fi
+    else
+        if [[ "$1" =~ ^(([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))\.){3}([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))$ ]]; then
+            return 0
+        else
+            return 1
+        fi
+    fi
+}
+
+
 #####################
 #                   #
 #  IV - ROOT CHECK  #
@@ -281,6 +306,10 @@ select option in "Add service" "Remove service" "List services" "Exit"; do
                 break
             fi
             read -r -p "Enter IP address of the server and the port if necessary: " server_ip
+            if ! address_check "$server_ip"; then
+                echo -e "${Red}Invalid address${No_Color}"
+                break
+            fi
             read -r -p "Enter the service name: " service_name
             read -r -p "Is the service a https service? [y/n]: " https
             add_service "$service_name" "$server_name" "$server_ip" "$https"
