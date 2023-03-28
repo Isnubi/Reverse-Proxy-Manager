@@ -61,7 +61,6 @@ NGINX_VAR_DIR="/var/log/nginx"
 NGINX_SSL_DIR="/etc/nginx/certs"
 NGINX_CERT="/etc/nginx/certs/certificat.crt"
 NGINX_KEY="/etc/nginx/certs/certificat.key"
-SSL_SUBJECTS=f"/C=FR/ST=FRANCE/L=NOISY-LE-GRAND/O=ESIEE-PARIS/OU=CLUB-NIX/CN={$(hostname -I | cut -d' ' -f1)}"
 
 
 #####################
@@ -199,6 +198,13 @@ install_nginx () {
     apt install nginx openssl -y
     echo -e "${Yellow}Generating SSL certificate...${No_Color}"
     mkdir -p "$NGINX_SSL_DIR"
+    echo -e "${Yellow}Enter your information for the SSL certificate${No_Color}"
+    read -r -p "Country code: " country_code
+    read -r -p "State: " state
+    read -r -p "Location: " location
+    read -r -p "Organization: " organization
+    read -r -p "Organization unit: " organization_unit
+    SSL_SUBJECTS=f"/C=$country_code/ST=$state/L=$location/O=$organization/OU=$organization_unit/CN={$(hostname -I | cut -d' ' -f1)}"
     openssl req -x509 -sha256 -days 365 -newkey rsa:4096 -keyout "$NGINX_KEY" -out "$NGINX_CERT" -nodes -subj "$SSL_SUBJECTS"
     echo -e "${Yellow}Deactivate nginx default configuration...${No_Color}"
     rm /etc/nginx/sites-enabled/default
