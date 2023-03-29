@@ -5,7 +5,7 @@
 #
 # AUTHOR             :     Louis GAMBART
 # CREATION DATE      :     2023.03.20
-# RELEASE            :     v1.3.0
+# RELEASE            :     v1.3.2
 # USAGE SYNTAX       :     .\Reverse-Proxy-Manager.sh
 #
 # SCRIPT DESCRIPTION :     This script is used to manage a reverse proxy configuration for nginx
@@ -34,6 +34,8 @@
 # v1.2.5  2023.03.22 - Louis GAMBART - Add subjects for ssl certificate generation
 # v1.2.6  2023.03.22 - Louis GAMBART - Add confirmation before removing a service and fix SC2115 error
 # v1.3.0  2023.03.22 - Louis GAMBART - Add IP address check for service creation (ip and port)
+# v1.3.1  2023.03.22 - Louis GAMBART - Add read instructions for certificate generation
+# v1.3.2  2023.03.22 - Louis GAMBART - Add sed to don't push nginx version in http header
 #
 #==========================================================================================
 
@@ -196,6 +198,8 @@ install_nginx () {
     echo -e "${Yellow}Installing nginx...${No_Color}"
     apt update
     apt install nginx openssl -y
+    #sed #server_tokens off into /etc/nginx/nginx.conf into server_tokens off
+    sed -i "s/# server_tokens off;/server_tokens off;/g" /etc/nginx/nginx.conf
     echo -e "${Yellow}Generating SSL certificate...${No_Color}"
     mkdir -p "$NGINX_SSL_DIR"
     echo -e "${Yellow}Enter your information for the SSL certificate${No_Color}"
