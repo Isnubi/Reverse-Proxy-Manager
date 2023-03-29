@@ -198,7 +198,6 @@ install_nginx () {
     echo -e "${Yellow}Installing nginx...${No_Color}"
     apt update
     apt install nginx openssl -y
-    #sed #server_tokens off into /etc/nginx/nginx.conf into server_tokens off
     sed -i "s/# server_tokens off;/server_tokens off;/g" /etc/nginx/nginx.conf
     echo -e "${Yellow}Generating SSL certificate...${No_Color}"
     mkdir -p "$NGINX_SSL_DIR"
