@@ -5,7 +5,7 @@
 #
 # AUTHOR             :     Louis GAMBART
 # CREATION DATE      :     2023.03.20
-# RELEASE            :     v1.3.2
+# RELEASE            :     v1.4.1
 # USAGE SYNTAX       :     .\Reverse-Proxy-Manager.sh
 #
 # SCRIPT DESCRIPTION :     This script is used to manage a reverse proxy configuration for nginx
@@ -36,6 +36,8 @@
 # v1.3.0  2023.03.22 - Louis GAMBART - Add IP address check for service creation (ip and port)
 # v1.3.1  2023.03.22 - Louis GAMBART - Add read instructions for certificate generation
 # v1.3.2  2023.03.22 - Louis GAMBART - Add sed to don't push nginx version in http header
+# v1.4.0  2023.04.20 - Louis GAMBART - Rework of the script to include security options (check modifications in the commit)
+# v1.4.1  2023.04.20 - Louis GAMBART - Add reverse uninstall option
 #
 #==========================================================================================
 
@@ -58,11 +60,11 @@ Green='\033[0;32m '     # Green
 #                  #
 ####################
 
+NGINX_DIR="/etc/nginx"
 NGINX_CONF_DIR="/etc/nginx/conf.d"
 NGINX_VAR_DIR="/var/log/nginx"
 NGINX_SSL_DIR="/etc/nginx/certs"
-NGINX_CERT="/etc/nginx/certs/certificat.crt"
-NGINX_KEY="/etc/nginx/certs/certificat.key"
+DAYS="1095"
 
 
 #####################
@@ -94,6 +96,22 @@ add_service () {
         exit
     fi
 
+    # create ssl certificate
+    Country=$(grep COUNTRY "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+    State=$(grep STATE "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f3)
+    Location=$(grep LOCATION "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f4)
+    Orga=$(grep ORGANIZATION "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f5)
+    OrgaUnit=$(grep ORGANIZATION_UNIT "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f6)
+    {
+        echo "[req]"
+        echo "distinguished_name=req"
+        echo "[SAN]"
+        echo "subjectAltName=DNS:$3"
+    } >> "$NGINX_SSL_DIR"/"$2".ext.cnf
+
+    openssl req -new -newkey rsa:4096 -sha256 -days "$DAYS" -nodes -x509 -keyout "$NGINX_SSL_DIR"/"$2".key -out "$NGINX_SSL_DIR"/"$2".crt -subj "/C=$Country/ST=$State/L=$Location/O=$Orga/OU=$OrgaUnit/CN=$2" -config "$NGINX_SSL_DIR"/"$2".ext.cnf > /dev/null 2>&1
+    rm "$NGINX_SSL_DIR"/"$2".ext.cnf
+
     # create log dir
     mkdir -p $NGINX_VAR_DIR/"$2"
 
@@ -113,15 +131,36 @@ server {
 server {
     listen 443 ssl;
 
-    ssl_certificate $NGINX_CERT;
-    ssl_certificate_key $NGINX_KEY;
+    ssl_certificate $NGINX_SSL_DIR/$2.crt;
+    ssl_certificate_key $NGINX_SSL_DIR/$2.key;
 
     server_name $2;
 
     error_log $NGINX_VAR_DIR/$2/error.log;
     access_log $NGINX_VAR_DIR/$2/access.log;
 
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-XSS-Protection "1; mode=block";
+    add_header X-Content-Type-Options "nosniff";
+    add_header Referrer-Policy "no-referrer";
+    add_header Access-Control-Allow-Origin "clubnix.fr";
+    add_header Cross-Origin-Embedder-Policy "require-corp";
+    add_header Cross-Origin-Opener-Policy "same-origin";
+    add_header Cross-Origin-Resource-Policy "same-site";
+
+    add_header Permissions-Policy ();
+    add_header Content-Security-Policy "default-src 'self'; img-src 'self' data: https: http:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'";
+
+    set_cookie_flag * HttpOnly secure SameSite=Strict;
+
     location / {
+        proxy_set_header Host \$host;
+        proxy_set_header X-Forwarded-Scheme \$scheme;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-For \$remote_addr;
+        proxy_set_header X-Real-IP \$remote_addr;
+
         proxy_pass $service_type://$3;
     }
 }
@@ -149,6 +188,8 @@ remove_service () {
     if [ "$removal_confirmation" = 'y' ]; then
         rm -rf "${NGINX_CONF_DIR:?}/$1".conf
         rm -rf "${NGINX_VAR_DIR:?}/$1"
+        rm -rf "${NGINX_SSL_DIR:?}/$1".crt
+        rm -rf "${NGINX_SSL_DIR:?}/$1".key
 
         echo -e "${Green}Service $1 removed from reverse proxy${No_Color}"
         echo -e "${Yellow}Restarting nginx...${No_Color}"
@@ -197,22 +238,106 @@ install_nginx () {
 
     echo -e "${Yellow}Installing nginx...${No_Color}"
     apt update
-    apt install nginx openssl -y
-    sed -i "s/# server_tokens off;/server_tokens off;/g" /etc/nginx/nginx.conf
-    echo -e "${Yellow}Generating SSL certificate...${No_Color}"
+    apt install nginx openssl wget git gcc make libpcre3 libpcre3-dev zlib1g-dev zlib1g -y
+
+    NGINX_VERSION=$(nginx -v 2>&1 | sed -n 's/.*nginx\/\([0-9.]*\).*/\1/p')
+    wget https://nginx.org/download/nginx-"$NGINX_VERSION".tar.gz
+    tar -xzf nginx-"$NGINX_VERSION".tar.gz
+    git clone https://github.com/AirisX/nginx_cookie_flag_module.git
+    cd ~/nginx-"$NGINX_VERSION" || return
+    ./configure --with-compat --add-dynamic-module=../nginx_cookie_flag_module
+    make modules
+
+    cp objs/ngx_http_cookie_flag_filter_module.so /usr/lib/nginx/modules/
+    echo "load_module modules/ngx_http_cookie_flag_filter_module.so;" > /etc/nginx/modules-enabled/ngx_http_cookie_flag_filter_module.conf
+    rm -Rf ~/nginx-"$NGINX_VERSION"
+    rm -Rf ~/nginx_cookie_flag_module
+    rm ~/nginx-"$NGINX_VERSION".tar.gz
+
+    mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
+    cat > /etc/nginx/nginx.conf <<EOF
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+include /etc/nginx/modules-enabled/*.conf;
+
+events {
+    worker_connections 768;
+}
+
+http {
+    ##
+    # Basic Settings
+    ##
+
+    sendfile on;
+    tcp_nopush on;
+    types_hash_max_size 2048;
+    server_tokens off;
+
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    ##
+    # SSL Settings
+    ##
+
+    ssl_protocols TLSv1.2 TLSv1.3; # Dropping SSLv3, TLSv1 and TLSv1.1, ref: POODLE
+    ssl_prefer_server_ciphers on;
+
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+
+    ##
+    # Logging Settings
+    ##
+
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log;
+
+    ##
+    # Gzip Settings
+    ##
+
+    gzip off;
+
+    ##
+    # Virtual Host Configs
+    ##
+
+    include /etc/nginx/conf.d/*.conf;
+    include /etc/nginx/sites-enabled/*;
+}
+EOF
+
     mkdir -p "$NGINX_SSL_DIR"
     echo -e "${Yellow}Enter your information for the SSL certificate${No_Color}"
-    read -r -p "Country code: " country_code
-    read -r -p "State: " state
-    read -r -p "Location: " location
-    read -r -p "Organization: " organization
-    read -r -p "Organization unit: " organization_unit
-    SSL_SUBJECTS=f"/C=$country_code/ST=$state/L=$location/O=$organization/OU=$organization_unit/CN={$(hostname -I | cut -d' ' -f1)}"
-    openssl req -x509 -sha256 -days 365 -newkey rsa:4096 -keyout "$NGINX_KEY" -out "$NGINX_CERT" -nodes -subj "$SSL_SUBJECTS"
+    read -r -p "Country code: " C
+    read -r -p "State: " ST
+    read -r -p "Location: " L
+    read -r -p "Organization: " O
+    read -r -p "Organization unit: " OU
+
+    {
+        echo "COUNTRY=$C"
+        echo "STATE=$ST"
+        echo "LOCATION=$L"
+        echo "ORGANIZATION=$O"
+        echo "ORGANIZATION-UNIT=$OU"
+    } >> "$NGINX_SSL_DIR"/ssl.conf
+
     echo -e "${Yellow}Deactivate nginx default configuration...${No_Color}"
     rm /etc/nginx/sites-enabled/default
     echo -e "${Yellow}Restarting nginx...${No_Color}"
     systemctl restart nginx
+}
+
+
+uninstall_nginx () {
+    # Uninstall nginx
+    apt purge nginx openssl wget git gcc make libpcre3 libpcre3-dev zlib1g-dev zlib1g -y
+    apt autoremove -y
+    rm -Rf "$NGINX_DIR"
+    rm -Rf "$NGINX_VAR_DIR"
 }
 
 
@@ -306,7 +431,7 @@ fi
 #######################
 
 PS3='Please enter your choice: '
-select option in "Add service" "Remove service" "List services" "Exit"; do
+select option in "Add service" "Remove service" "List services" "Uninstall" "Exit"; do
     case $option in
         "Add service")
             read -r -p "Enter server name like service.clubnix.fr: " server_name
@@ -339,6 +464,11 @@ select option in "Add service" "Remove service" "List services" "Exit"; do
             echo ""
             list_services
             echo ""
+            break
+            ;;
+        "Uninstall")
+            echo -e "${Yellow}Uninstalling reverse proxy...${No_Color}"
+            uninstall_nginx
             break
             ;;
         "Exit")
