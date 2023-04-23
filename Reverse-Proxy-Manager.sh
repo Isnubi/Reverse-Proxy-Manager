@@ -106,7 +106,7 @@ add_service () {
         echo "[req]"
         echo "distinguished_name=req"
         echo "[SAN]"
-        echo "subjectAltName=DNS:$3"
+        echo "subjectAltName=DNS:$2"
     } >> "$NGINX_SSL_DIR"/"$2".ext.cnf
 
     openssl req -new -newkey rsa:4096 -sha256 -days "$DAYS" -nodes -x509 -keyout "$NGINX_SSL_DIR"/"$2".key -out "$NGINX_SSL_DIR"/"$2".crt -subj "/C=$Country/ST=$State/L=$Location/O=$Orga/OU=$OrgaUnit/CN=$2" -config "$NGINX_SSL_DIR"/"$2".ext.cnf > /dev/null 2>&1
