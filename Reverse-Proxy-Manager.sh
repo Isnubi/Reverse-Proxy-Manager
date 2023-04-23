@@ -104,9 +104,21 @@ add_service () {
     OrgaUnit=$(grep ORGANIZATION_UNIT "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f6)
     {
         echo "[req]"
-        echo "distinguished_name=req"
-        echo "[SAN]"
-        echo "subjectAltName=DNS:$2"
+        echo "distinguished_name = req_distinguished_name"
+        echo "x509_extensions = v3_req"
+        echo "prompt = no"
+        echo "[req_distinguished_name]"
+        echo "C = $Country"
+        echo "ST = $State"
+        echo "L = $Location"
+        echo "O = $Orga"
+        echo "OU = $OrgaUnit"
+        echo "[v3_req]"
+        echo "keyUsage = critical, digitalSignature, keyAgreement"
+        echo "extendedKeyUsage = serverAuth"
+        echo "subjectAltName = @alt_names"
+        echo "[alt_names]"
+        echo "DNS.1 = $2"
     } >> "$NGINX_SSL_DIR"/"$2".ext.cnf
 
     openssl req -new -newkey rsa:4096 -sha256 -days "$DAYS" -nodes -x509 -keyout "$NGINX_SSL_DIR"/"$2".key -out "$NGINX_SSL_DIR"/"$2".crt -subj "/C=$Country/ST=$State/L=$Location/O=$Orga/OU=$OrgaUnit/CN=$2" -config "$NGINX_SSL_DIR"/"$2".ext.cnf > /dev/null 2>&1
