@@ -5,7 +5,7 @@
 #
 # AUTHOR             :     Louis GAMBART
 # CREATION DATE      :     2023.03.20
-# RELEASE            :     v1.4.1
+# RELEASE            :     v1.5.2
 # USAGE SYNTAX       :     .\Reverse-Proxy-Manager.sh
 #
 # SCRIPT DESCRIPTION :     This script is used to manage a reverse proxy configuration for nginx
@@ -38,6 +38,9 @@
 # v1.3.2  2023.03.22 - Louis GAMBART - Add sed to don't push nginx version in http header
 # v1.4.0  2023.04.20 - Louis GAMBART - Rework of the script to include security options (check modifications in the commit)
 # v1.4.1  2023.04.20 - Louis GAMBART - Add reverse uninstall option
+# v1.5.0  2023.05.14 - Louis GAMBART - Add check on server_name to validate FQDn
+# v1.5.1  2023.05.14 - Louis GAMBART - Add echo in the script
+# v1.5.2  2023.05.14 - Louis GAMBART - Fix dir check for nginx SSL dir instead of unique cert/key
 #
 #==========================================================================================
 
@@ -52,6 +55,7 @@ No_Color='\033[0m'      # No Color
 Red='\033[0;31m'        # Red
 Yellow='\033[0;33m'     # Yellow
 Green='\033[0;32m '     # Green
+Blue='\033[0;34m'       # Blue
 
 
 ####################
@@ -377,24 +381,45 @@ address_check () {
 }
 
 
-#####################
-#                   #
-#  IV - ROOT CHECK  #
-#                   #
-#####################
+########################
+#                      #
+#  IV - SCRIPT HEADER  #
+#                      #
+########################
 
+echo -e """
+${Blue}
+                           _                 _     _
+                          (_)___ _ __  _   _| |__ (_)
+                          | / __| '_ \| | | | '_ \| |
+                          | \__ \ | | | |_| | |_) | |
+                          |_|___/_| |_|\__,_|_.__/|_|
+${No_Color}
+"""
+
+
+####################
+#                  #
+#  V - ROOT CHECK  #
+#                  #
+####################
+
+echo -e "${Yellow}Checking if you are root...${No_Color}"
 if [ "$(id -u)" -ne 0 ]; then
     echo -e "${Red}Please run as root${No_Color}"
     exit
+else
+    echo -e "${Green}You are root${No_Color}"
 fi
 
 
-#####################
-#                   #
-#  V - NGINX CHECK  #
-#                   #
-#####################
+######################
+#                    #
+#  VI - NGINX CHECK  #
+#                    #
+######################
 
+echo -e "${Yellow}Checking if nginx is installed...${No_Color}"
 if ! nginx -v > /dev/null 2>&1; then
     echo -e "${Red}Nginx is not installed${No_Color}"
     read -r -p "Do you want to install nginx? [y/n]: " install_nginx
@@ -409,45 +434,52 @@ if ! nginx -v > /dev/null 2>&1; then
         echo -e "${Red}Invalid input${No_Color}"
         exit
     fi
+else
+    echo -e "${Green}Nginx is installed${No_Color}"
 fi
 
 
-#####################
-#                   #
-#  VI - TEST PATHS  #
-#                   #
-#####################
+######################
+#                    #
+#  VII - TEST PATHS  #
+#                    #
+######################
 
-if [ ! -d $NGINX_CONF_DIR ]; then
+echo -e "${Yellow}Checking if nginx necessary paths exist...${No_Color}"
+if [ ! -d "$NGINX_CONF_DIR" ]; then
     echo -e "${Red}Nginx conf dir does not exist${No_Color}"
     exit
 fi
-if [ ! -d $NGINX_VAR_DIR ]; then
+if [ ! -d "$NGINX_VAR_DIR" ]; then
     echo -e "${Red}Nginx log dir does not exist${No_Color}"
     exit
 fi
-if [ ! -f $NGINX_KEY ]; then
-    echo -e "${Red}Nginx key does not exist${No_Color}"
+if [ ! -d "$NGINX_SSL_DIR" ]; then
+    echo -e "${Red}Nginx ssl dir does not exist${No_Color}"
     exit
 fi
-if [ ! -f $NGINX_CERT ]; then
-    echo -e "${Red}Nginx certificate does not exist${No_Color}"
-    exit
-fi
+echo -e "${Green}Nginx necessary paths exist${No_Color}"
 
 
-#######################
-#                     #
-#  VII - MAIN SCRIPT  #
-#                     #
-#######################
+########################
+#                      #
+#  VIII - MAIN SCRIPT  #
+#                      #
+########################
 
 PS3='Please enter your choice: '
 select option in "Add service" "Remove service" "List services" "Uninstall" "Exit"; do
     case $option in
         "Add service")
             read -r -p "Enter server name like service.clubnix.fr: " server_name
-            if check_service "$server_name"; then
+            result=$(echo "$server_name" | grep -P '(?=^.{1,254}$)(^(?>(?!\d+\.)[a-zA-Z0-9_\-]{1,63}\.?)+(?:[a-zA-Z]{2,})$)')
+            if [[ -z "$server_name" ]]; then
+                echo -e "${Red}No server name entered${No_Color}"
+                break
+            elif [[ -z "$result" ]]; then
+                echo -e "${Red}Invalid server name${No_Color}"
+                break
+            elif check_service "$server_name"; then
                 echo -e "${Red}Service already exists${No_Color}"
                 break
             fi
