@@ -5,7 +5,7 @@
 #
 # AUTHOR             :     Louis GAMBART
 # CREATION DATE      :     2023.03.20
-# RELEASE            :     v1.5.2
+# RELEASE            :     v1.5.3
 # USAGE SYNTAX       :     .\Reverse-Proxy-Manager.sh
 #
 # SCRIPT DESCRIPTION :     This script is used to manage a reverse proxy configuration for nginx
@@ -41,6 +41,7 @@
 # v1.5.0  2023.05.14 - Louis GAMBART - Add check on server_name to validate FQDn
 # v1.5.1  2023.05.14 - Louis GAMBART - Add echo in the script
 # v1.5.2  2023.05.14 - Louis GAMBART - Fix dir check for nginx SSL dir instead of unique cert/key
+# v1.5.3  2023.05.18 - Louis GAMBART - Fix bug in uninstall option
 #
 #==========================================================================================
 
@@ -350,8 +351,7 @@ EOF
 
 uninstall_nginx () {
     # Uninstall nginx
-    apt purge nginx openssl wget git gcc make libpcre3 libpcre3-dev zlib1g-dev zlib1g -y
-    apt autoremove -y
+    apt autoremove --purge nginx openssl wget git gcc make libpcre3 libpcre3-dev zlib1g-dev zlib1g -y
     rm -Rf "$NGINX_DIR"
     rm -Rf "$NGINX_VAR_DIR"
 }
