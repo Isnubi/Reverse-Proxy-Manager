@@ -408,8 +408,6 @@ echo -e "${Yellow}Checking if you are root...${No_Color}"
 if [ "$(id -u)" -ne 0 ]; then
     echo -e "${Red}Please run as root${No_Color}"
     exit
-else
-    echo -e "${Green}You are root${No_Color}"
 fi
 
 
