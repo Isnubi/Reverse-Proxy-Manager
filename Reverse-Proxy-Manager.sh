@@ -5,7 +5,7 @@
 #
 # AUTHOR             :     Louis GAMBART
 # CREATION DATE      :     2023.03.20
-# RELEASE            :     v1.5.3
+# RELEASE            :     1.5.4
 # USAGE SYNTAX       :     .\Reverse-Proxy-Manager.sh
 #
 # SCRIPT DESCRIPTION :     This script is used to manage a reverse proxy configuration for nginx
@@ -42,6 +42,8 @@
 # v1.5.1  2023.05.14 - Louis GAMBART - Add echo in the script
 # v1.5.2  2023.05.14 - Louis GAMBART - Fix dir check for nginx SSL dir instead of unique cert/key
 # v1.5.3  2023.05.18 - Louis GAMBART - Fix bug in uninstall option
+# v1.5.4  2023.07.01 - Louis GAMBART - Add help and version options
+# v1.5.5  2023.07.01 - Louis GAMBART - Remove useless variable
 #
 #==========================================================================================
 
@@ -56,7 +58,6 @@ No_Color='\033[0m'      # No Color
 Red='\033[0;31m'        # Red
 Yellow='\033[0;33m'     # Yellow
 Green='\033[0;32m '     # Green
-Blue='\033[0;34m'       # Blue
 
 
 ####################
@@ -70,6 +71,7 @@ NGINX_CONF_DIR="/etc/nginx/conf.d"
 NGINX_VAR_DIR="/var/log/nginx"
 NGINX_SSL_DIR="/etc/nginx/certs"
 DAYS="1095"
+SCRIPT_NAME="Reverse-Proxy-Manager.sh"
 
 
 #####################
@@ -381,21 +383,60 @@ address_check () {
 }
 
 
-########################
-#                      #
-#  IV - SCRIPT HEADER  #
-#                      #
-########################
+print_help () {
+    # Print help message
+    echo -e """
+    ${Green} SYNOPSIS
+        ${SCRIPT_NAME} [-hv]
 
-echo -e """
-${Blue}
-                           _                 _     _
-                          (_)___ _ __  _   _| |__ (_)
-                          | / __| '_ \| | | | '_ \| |
-                          | \__ \ | | | |_| | |_) | |
-                          |_|___/_| |_|\__,_|_.__/|_|
-${No_Color}
-"""
+     DESCRIPTION
+        This script is used to manage a nginx reverse proxy. The script will also install nginx if it is not installed.
+
+     OPTIONS
+        -h, --help         Print the help message
+        -v, --version      Print the script version
+    ${No_Color}
+    """
+}
+
+
+print_version () {
+    # Print version message
+    echo -e """
+    ${Green}
+    version       ${SCRIPT_NAME} 1.5.5
+    author        Louis GAMBART (https://louis-gambart.fr)
+    license       GNU GPLv3.0
+    script_id     0
+    """
+}
+
+
+#########################
+#                       #
+#  IV - SCRIPT OPTIONS  #
+#                       #
+#########################
+
+while [[ $# -gt 0 ]]; do
+    key="$1"
+    case $key in
+        -h|--help)
+            print_help
+            exit
+            ;;
+        -v|--version)
+            print_version
+            exit
+            ;;
+        *)
+            echo -e "${Red}Unknown option: $key${No_Color}"
+            print_help
+            exit
+            ;;
+    esac
+    shift
+done
 
 
 ####################
