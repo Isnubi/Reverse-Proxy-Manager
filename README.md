@@ -13,9 +13,6 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a href="https://github.com/ClubNix/Reverse-Proxy-Manager/">
-    <img src="x/x.png" alt="Logo">
-  </a>
 
 
 <h3 align="center">Project Name</h3>
@@ -59,10 +56,6 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-<div align="center">
-    <img src="x/x.png" alt="Logo">
-</div>
-
 This project is a manager for Nginx reverse proxy. It allows you to manage your reverse proxy configuration files and to generate them automatically.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -98,21 +91,21 @@ You can install **...** by following these steps.
         sudo apt install git
         ```
 
-2. A web server, running with Nginx, is required to use this project.
-
 
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-You just have to launch the script.
+You just have to launch the script as root (not sudo invoke).
 
 ```sh
 chmod +x Reverse-Proxy-Manager.sh
 ./Reverse-Proxy-Manager.sh
 ```
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+At the first start, it will ask you to install Nginx if it is not already installed.
+If Nginx is already installed, some paths will not be available. I recommend you to add the `/etc/nginx/certs` directory and execute the script to uninstall and reinstall Nginx with the script because of the recompilation of Nginx with specific modules.
 
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
 <!-- ROADMAP -->
@@ -122,7 +115,6 @@ chmod +x Reverse-Proxy-Manager.sh
 See the [open issues](https://github.com/ClubNix/Reverse-Proxy-Manager/issues) for a full list of proposed features (and known issues).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 
 
 <!-- CONTRIBUTING -->
@@ -142,7 +134,6 @@ Don't forget to give the project a star! Thanks again!
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
-
 <!-- LICENSE -->
 ## License
 
@@ -151,10 +142,8 @@ Distributed under the MIT License. See `LICENSE.md` for more information.
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
-
 <!-- CONTACT -->
 ## Contact
-
 
 Isnubi - [@Louis_Gambart](https://twitter.com/Louis_Gambart) - [contact@louis-gambart.fr](mailto:louis-gambart.fr)
 <br>**Discord:** isnubi#6221
@@ -177,7 +166,7 @@ Isnubi - [@Louis_Gambart](https://twitter.com/Louis_Gambart) - [contact@louis-ga
 [issues-shield]: https://img.shields.io/github/issues/ClubNix/Reverse-Proxy-Manager.svg?style=for-the-badge
 [issues-url]: https://github.com/ClubNix/Reverse-Proxy-Manager/issues
 [license-shield]: https://img.shields.io/github/license/ClubNix/Reverse-Proxy-Manager.svg?style=for-the-badge
-[license-url]: https://github.com/ClubNix/Reverse-Proxy-Manager/blob/master/LICENSE.md
+[license-url]: https://github.com/ClubNix/Reverse-Proxy-Manager/blob/master/LICENSE
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/louis-gambart
 [Bash-shield]: https://img.shields.io/badge/Bash-121011?style=for-the-badge&logo=gnu-bash&logoColor=white
