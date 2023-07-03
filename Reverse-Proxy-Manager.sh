@@ -5,7 +5,7 @@
 #
 # AUTHOR             :     Louis GAMBART
 # CREATION DATE      :     2023.03.20
-# RELEASE            :     1.5.6
+# RELEASE            :     1.5.7
 # USAGE SYNTAX       :     .\Reverse-Proxy-Manager.sh
 #
 # SCRIPT DESCRIPTION :     This script is used to manage a reverse proxy configuration for nginx
@@ -45,6 +45,7 @@
 # v1.5.4  2023.07.01 - Louis GAMBART - Add help and version options
 # v1.5.5  2023.07.01 - Louis GAMBART - Remove useless variable
 # v1.5.6  2023.07.03 - Louis GAMBART - Add root check to prevent run via sudo
+# v1.5.7  2023.07.03 - Louis GAMBART - Add code to exit command
 #
 #==========================================================================================
 
@@ -91,7 +92,7 @@ add_service () {
     # check if service already exists
     if [ -f $NGINX_CONF_DIR/"$2".conf ]; then
         echo -e "${Red}Service already exists${No_Color}"
-        exit
+        exit 1
     fi
 
     # check if https
@@ -101,7 +102,7 @@ add_service () {
         service_type="http"
     else
         echo -e "${Red}Invalid input${No_Color}"
-        exit
+        exit 1
     fi
 
     # create ssl certificate
@@ -231,7 +232,7 @@ list_services () {
     for file in "$NGINX_CONF_DIR"/*.conf; do
         if [ ! -f "$file" ]; then
             echo -e "${Red}No services found${No_Color}"
-            exit
+            exit 1
         fi
         echo -e "${Green}$(basename "$file" .conf)${No_Color}"
         server_ip=$(grep -oP '(?<=proxy_pass ).*(?=;)' "$file")
@@ -405,7 +406,7 @@ print_version () {
     # Print version message
     echo -e """
     ${Green}
-    version       ${SCRIPT_NAME} 1.5.6
+    version       ${SCRIPT_NAME} 1.5.7
     author        Louis GAMBART (https://louis-gambart.fr)
     license       GNU GPLv3.0
     script_id     0
@@ -424,16 +425,16 @@ while [[ $# -gt 0 ]]; do
     case $key in
         -h|--help)
             print_help
-            exit
+            exit 0
             ;;
         -v|--version)
             print_version
-            exit
+            exit 0
             ;;
         *)
             echo -e "${Red}Unknown option: $key${No_Color}"
             print_help
-            exit
+            exit 0
             ;;
     esac
     shift
@@ -471,13 +472,13 @@ if ! nginx -v > /dev/null 2>&1; then
     if [ "$install_nginx" = 'y' ]; then
         install_nginx
         echo -e "${Green}Nginx installed. You can now run this script again.${No_Color}"
-        exit
+        exit 0
     elif [ "$install_nginx" = 'n' ]; then
         echo -e "${Red}Nginx is required to run this script${No_Color}"
-        exit
+        exit 0
     else
         echo -e "${Red}Invalid input${No_Color}"
-        exit
+        exit 1
     fi
 else
     echo -e "${Green}Nginx is installed${No_Color}"
@@ -493,15 +494,15 @@ fi
 echo -e "${Yellow}Checking if nginx necessary paths exist...${No_Color}"
 if [ ! -d "$NGINX_CONF_DIR" ]; then
     echo -e "${Red}Nginx conf dir does not exist${No_Color}"
-    exit
+    exit 1
 fi
 if [ ! -d "$NGINX_VAR_DIR" ]; then
     echo -e "${Red}Nginx log dir does not exist${No_Color}"
-    exit
+    exit 1
 fi
 if [ ! -d "$NGINX_SSL_DIR" ]; then
     echo -e "${Red}Nginx ssl dir does not exist${No_Color}"
-    exit
+    exit 1
 fi
 echo -e "${Green}Nginx necessary paths exist${No_Color}"
 
