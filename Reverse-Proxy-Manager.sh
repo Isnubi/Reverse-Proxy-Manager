@@ -5,7 +5,7 @@
 #
 # AUTHOR             :     Louis GAMBART
 # CREATION DATE      :     2023.03.20
-# RELEASE            :     1.5.5
+# RELEASE            :     1.5.6
 # USAGE SYNTAX       :     .\Reverse-Proxy-Manager.sh
 #
 # SCRIPT DESCRIPTION :     This script is used to manage a reverse proxy configuration for nginx
@@ -44,6 +44,7 @@
 # v1.5.3  2023.05.18 - Louis GAMBART - Fix bug in uninstall option
 # v1.5.4  2023.07.01 - Louis GAMBART - Add help and version options
 # v1.5.5  2023.07.01 - Louis GAMBART - Remove useless variable
+# v1.5.6  2023.07.03 - Louis GAMBART - Add root check to prevent run via sudo
 #
 #==========================================================================================
 
@@ -404,7 +405,7 @@ print_version () {
     # Print version message
     echo -e """
     ${Green}
-    version       ${SCRIPT_NAME} 1.5.5
+    version       ${SCRIPT_NAME} 1.5.6
     author        Louis GAMBART (https://louis-gambart.fr)
     license       GNU GPLv3.0
     script_id     0
@@ -448,7 +449,12 @@ done
 echo -e "${Yellow}Checking if you are root...${No_Color}"
 if [ "$(id -u)" -ne 0 ]; then
     echo -e "${Red}Please run as root${No_Color}"
-    exit
+    exit 1
+elif [[ -n ${SUDO_USER} ]]; then
+    echo -e "${Red}Please run as root without sudo${No_Color}"
+    exit 1
+else
+    echo -e "${Green}You are root${No_Color}"
 fi
 
 
