@@ -13,7 +13,7 @@ ENV SSL_COUNTRY='US' \
     SSL_STATE='California' \
     SSL_CITY='San Francisco' \
     SSL_ORG='My Organization' \
-    SSL_OU='My Department' \
+    SSL_OU='My Department'
 
 # Install nginx
 RUN apk update &&  \
@@ -23,76 +23,19 @@ RUN apk update &&  \
     apk add --no-cache bash && \
     # Configure nginx \
     mv "$NGINX_DIR"/nginx.conf "$NGINX_DIR"/nginx.conf.bak && \
+    wget -o "$NGINX_DIR"/nginx.conf https://raw.githubusercontent.com/ClubNix/Reverse-Proxy-Manager/master/docker/nginx.conf && \
+    sed -i "s|\$NGINX_DIR|$NGINX_DIR|g" "$NGINX_DIR"/nginx.conf && \
+    sed -i "s|\$NGINX_CONF_DIR|$NGINX_CONF_DIR|g" "$NGINX_DIR"/nginx.conf && \
+    sed -i "s|\$NGINX_LOG_DIR|$NGINX_LOG_DIR|g" "$NGINX_DIR"/nginx.conf && \
     mkdir -p "$NGINX_SSL_DIR" && \
-    # Create configuration file \
-    bash -c "cat <<EOF> $NGINX_DIR/nginx.conf
-user nginx;
-worker_processes auto;
-pid /run/nginx.pid;
-
-events {
-    worker_connections 768;
-}
-
-http {
-    ##
-    # Basic Settings
-    ##
-
-    sendfile on;
-    tcp_nopush on;
-    types_hash_max_size 2048;
-    server_tokens off;
-
-    include $NGINX_DIR/mime.types;
-    default_type application/octet-stream;
-
-    ##
-    # SSL Settings
-    ##
-
-    ssl_protocols TLSv1.2 TLSv1.3; # Dropping SSLv3, TLSv1 and TLSv1.1, ref: POODLE
-    ssl_prefer_server_ciphers on;
-
-    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
-
-    ##
-    # Logging Settings
-    ##
-
-    access_log $NGINX_LOG_DIR/access.log;
-    error_log $NGINX_LOG_DIR/error.log;
-
-    ##
-    # Gzip Settings
-    ##
-
-    gzip off;
-
-    ##
-    # Virtual Host Configs
-    ##
-
-    include $NGINX_CONF_DIR/*.conf;
-
-    # Healthcheck page
-    server {
-        listen 80;
-        location /health.html {
-            return 200 '<html lang="en"><head><title>Healthcheck</title></head><body><h1>OK</h1></body></html>';
-        }
-    }
-}
-EOF" && \
-    bash -c "cat <<EOF> $NGINX_SSL_DIR/ssl.conf
-COUNTRY=$SSL_COUNTRY
-STATE=$SSL_STATE
-LOCATION=$SSL_CITY
-ORGANIZATION=$SSL_ORG
-ORGANIZATION-UNIT=$SSL_OU
-EOF" && \
+    wget -O "$NGINX_SSL_DIR"/ssl.conf https://raw.githubusercontent.com/ClubNix/Reverse-Proxy-Manager/master/docker/ssl.conf && \
+    sed -i "s|COUNTRY|$SSL_COUNTRY|g" "$NGINX_SSL_DIR"/ssl.conf && \
+    sed -i "s|STATE|$SSL_STATE|g" "$NGINX_SSL_DIR"/ssl.conf && \
+    sed -i "s|LOCATION|$SSL_CITY|g" "$NGINX_SSL_DIR"/ssl.conf && \
+    sed -i "s|ORGANIZATION|$SSL_ORG|g" "$NGINX_SSL_DIR"/ssl.conf && \
+    sed -i "s|ORGANIZATION-UNIT|$SSL_OU|g" "$NGINX_SSL_DIR"/ssl.conf && \
     # Get manager script \
-    wget -O /root/manager.sh https://raw.githubusercontent.com/ClubNix/Reverse-Proxy-Manager/master/manager.sh && \
+    wget -O /root/manager.sh https://raw.githubusercontent.com/ClubNix/Reverse-Proxy-Manager/master/docker/manager.sh && \
     chmod +x /root/manager.sh && \
     rm -rf /var/cache/apk/*
 
