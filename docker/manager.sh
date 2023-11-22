@@ -38,11 +38,9 @@ Orange='\033[0;35m'     # Orange
 #                  #
 ####################
 
-NGINX_DIR="/etc/nginx"
-NGINX_CONF_DIR="/etc/nginx/conf.d"
-NGINX_VAR_DIR="/var/log/nginx"
-NGINX_SSL_DIR="/etc/nginx/certs"
-DAYS="3650"
+NGINX_CONF_DIR=$NGINX_CONF_DIR_REPLACE
+NGINX_LOG_DIR=$NGINX_LOG_DIR_REPLACE
+NGINX_SSL_DIR=$NGINX_SSL_DIR_REPLACE
 SCRIPT_NAME="manager.sh"
 
 
@@ -75,6 +73,7 @@ add_service () {
     Location=$(grep LOCATION "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f4)
     Orga=$(grep ORGANIZATION "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f5)
     OrgaUnit=$(grep ORGANIZATION_UNIT "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f6)
+    Days=$(grep DAYS "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f7)
     {
         echo "[req]"
         echo "distinguished_name = req_distinguished_name"
@@ -94,11 +93,11 @@ add_service () {
         echo "DNS.1 = $2"
     } >> "$NGINX_SSL_DIR"/"$2".ext.cnf
 
-    openssl req -new -newkey rsa:4096 -sha256 -days "$DAYS" -nodes -x509 -keyout "$NGINX_SSL_DIR"/"$2".key -out "$NGINX_SSL_DIR"/"$2".crt -subj "/C=$Country/ST=$State/L=$Location/O=$Orga/OU=$OrgaUnit/CN=$2" -config "$NGINX_SSL_DIR"/"$2".ext.cnf > /dev/null 2>&1
+    openssl req -new -newkey rsa:4096 -sha256 -days "$Days" -nodes -x509 -keyout "$NGINX_SSL_DIR"/"$2".key -out "$NGINX_SSL_DIR"/"$2".crt -subj "/C=$Country/ST=$State/L=$Location/O=$Orga/OU=$OrgaUnit/CN=$2" -config "$NGINX_SSL_DIR"/"$2".ext.cnf > /dev/null 2>&1
     rm "$NGINX_SSL_DIR"/"$2".ext.cnf
 
     # create log dir
-    mkdir -p $NGINX_VAR_DIR/"$2"
+    mkdir -p $NGINX_LOG_DIR/"$2"
 
     # create conf file
     cat >> $NGINX_CONF_DIR/"$2".conf <<EOF
@@ -121,8 +120,8 @@ server {
 
     server_name $2;
 
-    error_log $NGINX_VAR_DIR/$2/error.log;
-    access_log $NGINX_VAR_DIR/$2/access.log;
+    error_log $NGINX_LOG_DIR/$2/error.log;
+    access_log $NGINX_LOG_DIR/$2/access.log;
 
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     add_header X-Frame-Options "SAMEORIGIN";
@@ -172,7 +171,7 @@ remove_service () {
     read -r -p "Are you sure? [y/n] " removal_confirmation
     if [ "$removal_confirmation" = 'y' ]; then
         rm -rf "${NGINX_CONF_DIR:?}/$1".conf
-        rm -rf "${NGINX_VAR_DIR:?}/$1"
+        rm -rf "${NGINX_LOG_DIR:?}/$1"
         rm -rf "${NGINX_SSL_DIR:?}/$1".crt
         rm -rf "${NGINX_SSL_DIR:?}/$1".key
 

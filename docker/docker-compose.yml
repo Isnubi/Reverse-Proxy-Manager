@@ -4,13 +4,14 @@ services:
   reverse-proxy:
     build:
       context: .
-    environment:
-      - NGINX_VERSION=1.24.0
-      - SSL_COUNTRY=US
-      - SSL_STATE=California
-      - SSL_CITY=San Francisco
-      - SSL_ORG=My Organization
-      - SSL_OU=My Department
+      args:
+        - NGINX_VERSION=1.24.0
+        - SSL_COUNTRY=US
+        - SSL_STATE=California
+        - SSL_CITY=San Francisco
+        - SSL_ORG=My Organization
+        - SSL_OU=My Department
+        - SSL_DAYS=3650
     ports:
       - "80:80"
       - "443:443"
