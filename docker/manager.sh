@@ -73,7 +73,7 @@ add_service () {
     Location=$(grep LOCATION= "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
     Orga=$(grep ORG= "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
     OrgaUnit=$(grep OU= "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
-    Days=$(grep DAYS "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+    Days=$(grep DAYS= "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
     {
         echo "[req]"
         echo "distinguished_name = req_distinguished_name"
