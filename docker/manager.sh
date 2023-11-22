@@ -71,8 +71,8 @@ add_service () {
     Country=$(grep COUNTRY "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
     State=$(grep STATE "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
     Location=$(grep LOCATION "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
-    Orga=$(grep ORGANIZATION "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
-    OrgaUnit=$(grep ORGANIZATION-UNIT "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+    Orga=$(grep ORG "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+    OrgaUnit=$(grep OU "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
     Days=$(grep DAYS "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
     {
         echo "[req]"
