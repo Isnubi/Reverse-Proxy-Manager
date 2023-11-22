@@ -196,7 +196,7 @@ list_services () {
             exit 1
         fi
         echo -e "${Green}$(basename "$file" .conf)${No_Color}"
-        server_ip=$(pcregrep -o1 'proxy_pass http[s]?://([^/]*)' "$file")
+        server_ip=$(pcregrep -o1 'proxy_pass http[s]?://([^/]*)(?!;)' "$file" | sed 's/;$//')
         echo -e "  IP: ${Green}$server_ip${No_Color}"
     done
 }
