@@ -69,11 +69,11 @@ add_service () {
 
     # create ssl certificate
     Country=$(grep COUNTRY "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
-    State=$(grep STATE "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f3)
-    Location=$(grep LOCATION "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f4)
-    Orga=$(grep ORGANIZATION "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f5)
-    OrgaUnit=$(grep ORGANIZATION_UNIT "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f6)
-    Days=$(grep DAYS "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f7)
+    State=$(grep STATE "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+    Location=$(grep LOCATION "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+    Orga=$(grep ORGANIZATION "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+    OrgaUnit=$(grep ORGANIZATION-UNIT "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+    Days=$(grep DAYS "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
     {
         echo "[req]"
         echo "distinguished_name = req_distinguished_name"
