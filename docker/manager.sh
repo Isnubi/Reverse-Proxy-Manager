@@ -28,8 +28,6 @@ No_Color='\033[0m'      # No Color
 Red='\033[0;31m'        # Red
 Yellow='\033[0;33m'     # Yellow
 Green='\033[0;32m '     # Green
-Blue='\033[0;34m'       # Blue
-Orange='\033[0;35m'     # Orange
 
 
 ####################
@@ -97,10 +95,10 @@ add_service () {
     rm "$NGINX_SSL_DIR"/"$2".ext.cnf
 
     # create log dir
-    mkdir -p $NGINX_LOG_DIR/"$2"
+    mkdir -p "$NGINX_LOG_DIR"/"$2"
 
     # create conf file
-    cat >> $NGINX_CONF_DIR/"$2".conf <<EOF
+    cat >> "$NGINX_CONF_DIR"/"$2".conf <<EOF
 map \$http_upgrade \$connection_upgrade {
 	default upgrade;
 	'' close;
@@ -162,7 +160,7 @@ remove_service () {
     # :param $1: server name
 
     # check if service exists
-    if [ ! -f $NGINX_CONF_DIR/"$1".conf ]; then
+    if [ ! -f "$NGINX_CONF_DIR"/"$1".conf ]; then
         echo -e "${Red}Service does not exist${No_Color}"
         return
     fi
@@ -198,7 +196,7 @@ list_services () {
             exit 1
         fi
         echo -e "${Green}$(basename "$file" .conf)${No_Color}"
-        server_ip=$(pcregrep -o1 'proxy_pass (http|https)://(.+)' "$file")
+        server_ip=$(pcregrep -o1 'proxy_pass http[s]?://([^/]*)' "$file")
         echo -e "  IP: ${Green}$server_ip${No_Color}"
     done
 }
@@ -209,7 +207,7 @@ check_service () {
     # :param $1: service name
     # :return: 0 if exists, 1 if not
 
-    if [ -f $NGINX_CONF_DIR/"$1".conf ]; then
+    if [ -f "$NGINX_CONF_DIR"/"$1".conf ]; then
         return 0
     else
         return 1
