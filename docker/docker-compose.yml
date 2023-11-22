@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  reverse-proxy:
+    build:
+      context: .
+    environment:
+      - NGINX_VERSION=1.24.0
+      - SSL_COUNTRY=US
+      - SSL_STATE=California
+      - SSL_CITY=San Francisco
+      - SSL_ORG=My Organization
+      - SSL_OU=My Department
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - logs:/var/log/nginx
+      - conf.d:/etc/nginx/conf.d
+      - certs:/etc/nginx/certs
+    restart: unless-stopped
+
+volumes:
+  logs:
+  conf.d:
+  certs:
