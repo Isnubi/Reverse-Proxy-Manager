@@ -5,7 +5,6 @@ services:
     build:
       context: .
       args:
-        - NGINX_VERSION=1.24.0
         - SSL_COUNTRY=US
         - SSL_STATE=California
         - SSL_CITY=San Francisco

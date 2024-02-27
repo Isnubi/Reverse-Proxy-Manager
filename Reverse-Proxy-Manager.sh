@@ -5,7 +5,7 @@
 #
 # AUTHOR             :     Louis GAMBART
 # CREATION DATE      :     2023.03.20
-# RELEASE            :     1.5.7
+# RELEASE            :     1.7.1
 # USAGE SYNTAX       :     .\Reverse-Proxy-Manager.sh
 #
 # SCRIPT DESCRIPTION :     This script is used to manage a reverse proxy configuration for nginx
@@ -46,6 +46,10 @@
 # v1.5.5  2023.07.01 - Louis GAMBART - Remove useless variable
 # v1.5.6  2023.07.03 - Louis GAMBART - Add root check to prevent run via sudo
 # v1.5.7  2023.07.03 - Louis GAMBART - Add code to exit command
+# v1.6.0  2023/11/02 - Louis GAMBART - Add color to output
+# v1.6.1  2023/11/02 - Louis GAMBART - Redirect output to /dev/null to avoid output in the terminal during installation
+# v1.7.0  2024/02/27 - Louis GAMBART - Replace ngx_http_cookie_flag_module with the built-in directive
+# v1.7.1  2024/02/27 - Louis GAMBART - Add custom Allow-Origin directive
 #
 #==========================================================================================
 
@@ -59,7 +63,8 @@
 No_Color='\033[0m'      # No Color
 Red='\033[0;31m'        # Red
 Yellow='\033[0;33m'     # Yellow
-Green='\033[0;32m '     # Green
+Green='\033[0;32m'     # Green
+Blue='\033[0;34m'       # Blue
 
 
 ####################
@@ -72,7 +77,6 @@ NGINX_DIR="/etc/nginx"
 NGINX_CONF_DIR="/etc/nginx/conf.d"
 NGINX_VAR_DIR="/var/log/nginx"
 NGINX_SSL_DIR="/etc/nginx/certs"
-DAYS="1095"
 SCRIPT_NAME="Reverse-Proxy-Manager.sh"
 
 
@@ -89,11 +93,7 @@ add_service () {
     # :param $3: server ip
     # :param $4: is https
 
-    # check if service already exists
-    if [ -f $NGINX_CONF_DIR/"$2".conf ]; then
-        echo -e "${Red}Service already exists${No_Color}"
-        exit 1
-    fi
+    echo -e -n "\n${Yellow}Adding service $1 to reverse proxy...${No_Color}"
 
     # check if https
     if [ "$4" = 'y' ]; then
@@ -101,16 +101,19 @@ add_service () {
     elif [ "$4" = 'n' ]; then
         service_type="http"
     else
-        echo -e "${Red}Invalid input${No_Color}"
+        echo -e " ${Red} ERR - Invalid input for https/http${No_Color}"
         exit 1
     fi
 
     # create ssl certificate
     Country=$(grep COUNTRY "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
-    State=$(grep STATE "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f3)
-    Location=$(grep LOCATION "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f4)
-    Orga=$(grep ORGANIZATION "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f5)
-    OrgaUnit=$(grep ORGANIZATION_UNIT "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f6)
+    State=$(grep STATE "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+    Location=$(grep LOCATION "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+    Orga=$(grep ORGANIZATION-GLOBAL "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+    OrgaUnit=$(grep ORGANIZATION-UNIT "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+    Days=$(grep DAYS "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+    AllowOrigin=$(grep ALLOW-ORIGIN "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+
     {
         echo "[req]"
         echo "distinguished_name = req_distinguished_name"
@@ -130,14 +133,14 @@ add_service () {
         echo "DNS.1 = $2"
     } >> "$NGINX_SSL_DIR"/"$2".ext.cnf
 
-    openssl req -new -newkey rsa:4096 -sha256 -days "$DAYS" -nodes -x509 -keyout "$NGINX_SSL_DIR"/"$2".key -out "$NGINX_SSL_DIR"/"$2".crt -subj "/C=$Country/ST=$State/L=$Location/O=$Orga/OU=$OrgaUnit/CN=$2" -config "$NGINX_SSL_DIR"/"$2".ext.cnf > /dev/null 2>&1
+    openssl req -new -newkey rsa:4096 -sha256 -days "$Days" -nodes -x509 -keyout "$NGINX_SSL_DIR"/"$2".key -out "$NGINX_SSL_DIR"/"$2".crt -subj "/C=$Country/ST=$State/L=$Location/O=$Orga/OU=$OrgaUnit/CN=$2" -config "$NGINX_SSL_DIR"/"$2".ext.cnf > /dev/null 2>&1
     rm "$NGINX_SSL_DIR"/"$2".ext.cnf
 
     # create log dir
-    mkdir -p $NGINX_VAR_DIR/"$2"
+    mkdir -p "$NGINX_VAR_DIR"/"$2"
 
     # create conf file
-    cat >> $NGINX_CONF_DIR/"$2".conf <<EOF
+    cat >> "$NGINX_CONF_DIR"/"$2".conf <<EOF
 map \$http_upgrade \$connection_upgrade {
 	default upgrade;
 	'' close;
@@ -165,7 +168,7 @@ server {
     add_header X-XSS-Protection "1; mode=block";
     add_header X-Content-Type-Options "nosniff";
     add_header Referrer-Policy "no-referrer";
-    add_header Access-Control-Allow-Origin "clubnix.fr";
+    add_header Access-Control-Allow-Origin "$AllowOrigin";
     add_header Cross-Origin-Embedder-Policy "require-corp";
     add_header Cross-Origin-Opener-Policy "same-origin";
     add_header Cross-Origin-Resource-Policy "same-site";
@@ -173,7 +176,7 @@ server {
     add_header Permissions-Policy ();
     add_header Content-Security-Policy "default-src 'self'; img-src 'self' data: https: http:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'";
 
-    set_cookie_flag * HttpOnly secure SameSite=Strict;
+    proxy_cookie_flags ~ secure httponly samesite=strict;
 
     location / {
         proxy_set_header Host \$host;
@@ -186,11 +189,12 @@ server {
     }
 }
 EOF
-    echo -e "${Green}Service $1 added to reverse proxy${No_Color}"
-    echo -e "${Yellow}Restarting nginx...${No_Color}"
+    echo -e "${Green} OK${No_Color}"
+    echo -e -n "${Yellow}Restarting nginx...${No_Color}"
     systemctl restart nginx
-    echo -e "${Green}Done!${No_Color}"
-    echo "If you want to add options to the service, edit the file $NGINX_CONF_DIR/$2.conf"
+    echo -e "${Green} OK${No_Color}\n"
+    echo -e "If you want to add options to the service, use the following command: ${Blue}nano $NGINX_CONF_DIR/$2.conf${No_Color}"
+    echo -e "You can find the certificate and the private key in the following directory: ${Blue}$NGINX_SSL_DIR${No_Color}"
 }
 
 
@@ -199,10 +203,13 @@ remove_service () {
     # :param $1: server name
 
     # check if service exists
+    echo -e -n "${Yellow}Checking if service exists...${No_Color}"
+
     if [ ! -f $NGINX_CONF_DIR/"$1".conf ]; then
-        echo -e "${Red}Service does not exist${No_Color}"
+        echo -e "${Red} Service does not exist${No_Color}"
         return
     fi
+    echo -e "${Green} OK${No_Color}"
 
     echo -e "${Yellow}You are about to remove the service $1 from the reverse proxy${No_Color}"
     read -r -p "Are you sure? [y/n] " removal_confirmation
@@ -213,14 +220,14 @@ remove_service () {
         rm -rf "${NGINX_SSL_DIR:?}/$1".key
 
         echo -e "${Green}Service $1 removed from reverse proxy${No_Color}"
-        echo -e "${Yellow}Restarting nginx...${No_Color}"
+        echo -e -n "${Yellow}Restarting nginx...${No_Color}"
         systemctl restart nginx
-        echo -e "${Green}Done!${No_Color}"
+        echo -e "${Green} OK${No_Color}"
     elif [ "$removal_confirmation" = 'n' ]; then
         echo -e "${Green}Service $1 not removed from reverse proxy${No_Color}"
         return
     else
-        echo -e "${Red}Invalid input${No_Color}"
+        echo -e "${Red} ERR - Invalid input${No_Color}"
         return
     fi
 }
@@ -229,11 +236,14 @@ remove_service () {
 list_services () {
     # List all services in the reverse proxy
 
+    echo -e -n "\n${Yellow}Listing services...${No_Color}"
+
     for file in "$NGINX_CONF_DIR"/*.conf; do
         if [ ! -f "$file" ]; then
-            echo -e "${Red}No services found${No_Color}"
+            echo -e "${Red} No services found${No_Color}"
             exit 1
         fi
+        echo -e "${Green} OK${No_Color}"
         echo -e "${Green}$(basename "$file" .conf)${No_Color}"
         server_ip=$(grep -oP '(?<=proxy_pass ).*(?=;)' "$file")
         echo -e "  IP: ${Green}$server_ip${No_Color}"
@@ -246,7 +256,7 @@ check_service () {
     # :param $1: service name
     # :return: 0 if exists, 1 if not
 
-    if [ -f $NGINX_CONF_DIR/"$1".conf ]; then
+    if [ -f "$NGINX_CONF_DIR"/"$1".conf ]; then
         return 0
     else
         return 1
@@ -257,24 +267,20 @@ check_service () {
 install_nginx () {
     # Install nginx and generate a self-signed certificate
 
-    echo -e "${Yellow}Installing nginx...${No_Color}"
-    apt update
-    apt install nginx openssl wget git gcc make libpcre3 libpcre3-dev zlib1g-dev zlib1g -y
+    echo -e -n "\n${Yellow}Check if internet is available...${No_Color}"
+    if ! ping -c 1 google.com > /dev/null 2>&1; then
+        echo -e "${Red} ERR - No internet connection${No_Color}"
+        exit 1
+    else
+        echo -e "${Green} OK${No_Color}"
+    fi
 
-    NGINX_VERSION=$(nginx -v 2>&1 | sed -n 's/.*nginx\/\([0-9.]*\).*/\1/p')
-    wget https://nginx.org/download/nginx-"$NGINX_VERSION".tar.gz
-    tar -xzf nginx-"$NGINX_VERSION".tar.gz
-    git clone https://github.com/AirisX/nginx_cookie_flag_module.git
-    cd ~/nginx-"$NGINX_VERSION" || return
-    ./configure --with-compat --add-dynamic-module=../nginx_cookie_flag_module
-    make modules
+    echo -e -n "\n${Yellow}Installing nginx...${No_Color}"
+    apt update > /dev/null 2>&1
+    apt install nginx ca-certificates wget git libpcre3 libpcre3-dev -y > /dev/null 2>&1
+    echo -e "${Green} OK${No_Color}"
 
-    cp objs/ngx_http_cookie_flag_filter_module.so /usr/lib/nginx/modules/
-    echo "load_module modules/ngx_http_cookie_flag_filter_module.so;" > /etc/nginx/modules-enabled/ngx_http_cookie_flag_filter_module.conf
-    rm -Rf ~/nginx-"$NGINX_VERSION"
-    rm -Rf ~/nginx_cookie_flag_module
-    rm ~/nginx-"$NGINX_VERSION".tar.gz
-
+    echo -e -n "${Yellow}Configuring nginx...${No_Color}"
     mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
     cat > /etc/nginx/nginx.conf <<EOF
 user www-data;
@@ -329,33 +335,46 @@ http {
     include /etc/nginx/sites-enabled/*;
 }
 EOF
+    echo -e "${Green} OK${No_Color}"
 
     mkdir -p "$NGINX_SSL_DIR"
-    echo -e "${Yellow}Enter your information for the SSL certificate${No_Color}"
+    echo -e "\n${Yellow}Enter your information for the SSL certificate${No_Color}"
     read -r -p "Country code: " C
     read -r -p "State: " ST
     read -r -p "Location: " L
     read -r -p "Organization: " O
     read -r -p "Organization unit: " OU
-
+    read -r -p "Certificate validity (in days): " DAYS
+    read -r -p "Domain for Access-Control-Allow-Origin directive (default: *): " ALLOW_ORIGIN
     {
         echo "COUNTRY=$C"
         echo "STATE=$ST"
         echo "LOCATION=$L"
-        echo "ORGANIZATION=$O"
+        echo "ORGANIZATION-GLOBAL=$O"
         echo "ORGANIZATION-UNIT=$OU"
+        echo "DAYS=$DAYS"
+        echo "ALLOW-ORIGIN=${ALLOW_ORIGIN:-*}"
     } >> "$NGINX_SSL_DIR"/ssl.conf
 
-    echo -e "${Yellow}Deactivate nginx default configuration...${No_Color}"
+    echo -e -n "\n${Yellow}Deactivate nginx default configuration...${No_Color}"
     rm /etc/nginx/sites-enabled/default
-    echo -e "${Yellow}Restarting nginx...${No_Color}"
+    echo -e "${Green} OK${No_Color}"
+
+    echo -e -n "\n${Yellow}Restarting nginx...${No_Color}"
     systemctl restart nginx
+    echo -e "${Green} OK${No_Color}"
+}
+
+
+backup_nginx () {
+    # Backup nginx configuration
+    tar -czf ./nginx_backup.tar.gz /etc/nginx > /dev/null 2>&1
 }
 
 
 uninstall_nginx () {
     # Uninstall nginx
-    apt autoremove --purge nginx openssl wget git gcc make libpcre3 libpcre3-dev zlib1g-dev zlib1g -y
+    apt autoremove --purge nginx openssl wget git libpcre3 libpcre3-dev -y > /dev/null 2>&1
     rm -Rf "$NGINX_DIR"
     rm -Rf "$NGINX_VAR_DIR"
 }
@@ -406,7 +425,7 @@ print_version () {
     # Print version message
     echo -e """
     ${Green}
-    version       ${SCRIPT_NAME} 1.5.7
+    version       ${SCRIPT_NAME} 1.7.1
     author        Louis GAMBART (https://louis-gambart.fr)
     license       GNU GPLv3.0
     script_id     0
@@ -447,15 +466,15 @@ done
 #                  #
 ####################
 
-echo -e "${Yellow}Checking if you are root...${No_Color}"
+echo -e -n "${Yellow}Checking if you are root...${No_Color}"
 if [ "$(id -u)" -ne 0 ]; then
-    echo -e "${Red}Please run as root${No_Color}"
+    echo -e "${Red} ERR - Please run the script as root${No_Color}"
     exit 1
 elif [[ -n ${SUDO_USER} ]]; then
-    echo -e "${Red}Please run as root without sudo${No_Color}"
+    echo -e "${Red} ERR - Please run the script as root, without SUDO user${No_Color}"
     exit 1
 else
-    echo -e "${Green}You are root${No_Color}"
+    echo -e "${Green} OK${No_Color}"
 fi
 
 
@@ -465,13 +484,13 @@ fi
 #                    #
 ######################
 
-echo -e "${Yellow}Checking if nginx is installed...${No_Color}"
+echo -e -n "${Yellow}Checking if nginx is installed...${No_Color}"
 if ! nginx -v > /dev/null 2>&1; then
-    echo -e "${Red}Nginx is not installed${No_Color}"
-    read -r -p "Do you want to install nginx? [y/n]: " install_nginx
+    echo -e "${Red} Nginx is not installed${No_Color}"
+    read -r -p "    * Do you want to install nginx? [y/n]: " install_nginx
     if [ "$install_nginx" = 'y' ]; then
         install_nginx
-        echo -e "${Green}Nginx installed. You can now run this script again.${No_Color}"
+        echo -e "\n${Green}Nginx installed. You can now run this script again.${No_Color}"
         exit 0
     elif [ "$install_nginx" = 'n' ]; then
         echo -e "${Red}Nginx is required to run this script${No_Color}"
@@ -481,7 +500,7 @@ if ! nginx -v > /dev/null 2>&1; then
         exit 1
     fi
 else
-    echo -e "${Green}Nginx is installed${No_Color}"
+    echo -e "${Green} OK${No_Color}"
 fi
 
 
@@ -491,20 +510,20 @@ fi
 #                    #
 ######################
 
-echo -e "${Yellow}Checking if nginx necessary paths exist...${No_Color}"
+echo -e -n "${Yellow}Checking if nginx necessary paths exist...${No_Color}"
 if [ ! -d "$NGINX_CONF_DIR" ]; then
-    echo -e "${Red}Nginx conf dir does not exist${No_Color}"
+    echo -e "${Red} ERR - Nginx conf dir does not exist${No_Color}"
     exit 1
 fi
 if [ ! -d "$NGINX_VAR_DIR" ]; then
-    echo -e "${Red}Nginx log dir does not exist${No_Color}"
+    echo -e "${Red} ERR - Nginx log dir does not exist${No_Color}"
     exit 1
 fi
 if [ ! -d "$NGINX_SSL_DIR" ]; then
-    echo -e "${Red}Nginx ssl dir does not exist${No_Color}"
+    echo -e "${Red} ERR - Nginx ssl dir does not exist${No_Color}"
     exit 1
 fi
-echo -e "${Green}Nginx necessary paths exist${No_Color}"
+echo -e "${Green} OK${No_Color}\n"
 
 
 ########################
@@ -514,9 +533,10 @@ echo -e "${Green}Nginx necessary paths exist${No_Color}"
 ########################
 
 PS3='Please enter your choice: '
-select option in "Add service" "Remove service" "List services" "Uninstall" "Exit"; do
+select option in "Add service" "Remove service" "List services" "Backup nginx" "Uninstall" "Exit"; do
     case $option in
         "Add service")
+            echo ""
             read -r -p "Enter server name like service.clubnix.fr: " server_name
             result=$(echo "$server_name" | grep -P '(?=^.{1,254}$)(^(?>(?!\d+\.)[a-zA-Z0-9_\-]{1,63}\.?)+(?:[a-zA-Z]{2,})$)')
             if [[ -z "$server_name" ]]; then
@@ -540,9 +560,6 @@ select option in "Add service" "Remove service" "List services" "Uninstall" "Exi
             break
             ;;
         "Remove service")
-            #list services
-            echo -e "${Yellow}Listing services...${No_Color}"
-            echo ""
             list_services
             echo ""
             read -r -p "Enter server name to remove: " server_name
@@ -550,22 +567,41 @@ select option in "Add service" "Remove service" "List services" "Uninstall" "Exi
             break
             ;;
         "List services")
-            echo -e "${Yellow}Listing services...${No_Color}"
-            echo ""
             list_services
-            echo ""
+            break
+            ;;
+        "Backup nginx")
+            echo -e -n "\n${Yellow}Backing up nginx...${No_Color}"
+            backup_nginx
+            echo -e "${Green} OK${No_Color}"
             break
             ;;
         "Uninstall")
-            echo -e "${Yellow}Uninstalling reverse proxy...${No_Color}"
-            uninstall_nginx
-            break
+            echo ""
+            read -r -p "Are you sure you want to uninstall nginx? [y/n]: " uninstall
+            if [ "$uninstall" = 'y' ]; then
+                echo -e -n "${Yellow}Backing up nginx...${No_Color}"
+                backup_nginx
+                echo -e "${Green} OK${No_Color}"
+
+                echo -e -n "${Yellow}Uninstalling nginx...${No_Color}"
+                uninstall_nginx
+                echo -e "${Green} OK${No_Color}"
+                break
+            elif [ "$uninstall" = 'n' ]; then
+              echo -e "${Green}Nginx not uninstalled${No_Color}"
+                break
+            else
+                echo -e "${Red}Invalid input${No_Color}"
+                break
+            fi
             ;;
         "Exit")
             break
             ;;
         *)
-            echo -e "${Red}Invalid option ${No_Color} $REPLY"
+            echo -e "${Red}Invalid option${No_Color} $REPLY"
+            break
             ;;
     esac
 done

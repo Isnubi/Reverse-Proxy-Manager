@@ -2,7 +2,6 @@ FROM alpine:3.18.4
 LABEL maintainer="Isnubi"
 
 # Variables
-ARG NGINX_VERSION='1.24.0'
 ARG NGINX_DIR='/etc/nginx'
 ARG NGINX_CONF_DIR='/etc/nginx/conf.d'
 ARG NGINX_LOG_DIR='/var/log/nginx'
@@ -25,13 +24,17 @@ RUN # Install nginx \
     # Clean up \
     rm -rf /var/cache/apk/*
 
+COPY ./conf/nginx.conf /etc/nginx/nginx.conf
+COPY ./conf/ssl.conf /etc/nginx/certs.conf
+COPY ./conf/manager.sh /root/manager.sh
+
 RUN # Configure nginx \
-    mv "$NGINX_DIR"/nginx.conf "$NGINX_DIR"/nginx.conf.bak && \
-    wget -O "$NGINX_DIR"/nginx.conf https://raw.githubusercontent.com/ClubNix/Reverse-Proxy-Manager/master/docker/nginx.conf && \
+    mv "$NGINX_DIR"/nginx.conf "$NGINX_DIR/nginx.conf.bak" && \
+    wget -O "$NGINX_DIR"/nginx.conf https://raw.githubusercontent.com/ClubNix/Reverse-Proxy-Manager/master/docker/conf/nginx.conf && \
     sed -i "s|\$NGINX_DIR|$NGINX_DIR|g" "$NGINX_DIR"/nginx.conf && \
     sed -i "s|\$NGINX_CONF_DIR|$NGINX_CONF_DIR|g" "$NGINX_DIR"/nginx.conf && \
     sed -i "s|\$NGINX_LOG_DIR|$NGINX_LOG_DIR|g" "$NGINX_DIR"/nginx.conf && \
-    mkdir -p "$NGINX_SSL_DIR" \
+    mkdir -p "$NGINX_SSL_DIR"
 RUN # Configure ssl \
     wget -O "$NGINX_SSL_DIR"/ssl.conf https://raw.githubusercontent.com/ClubNix/Reverse-Proxy-Manager/master/docker/ssl.conf && \
     sed -i "s|\$SSL_COUNTRY|$SSL_COUNTRY|g" "$NGINX_SSL_DIR"/ssl.conf && \
@@ -46,7 +49,6 @@ RUN # Get manager script \
     sed -i "s|\$NGINX_SSL_DIR_REPLACE|$NGINX_SSL_DIR|g" /root/manager.sh && \
     sed -i "s|\$NGINX_LOG_DIR_REPLACE|$NGINX_LOG_DIR|g" /root/manager.sh && \
     chmod +x /root/manager.sh
-
 
 # Set working directory
 WORKDIR /root

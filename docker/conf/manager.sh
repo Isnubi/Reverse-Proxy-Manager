@@ -5,7 +5,7 @@
 #
 # AUTHOR             :     Louis GAMBART
 # CREATION DATE      :     2023.11.21
-# RELEASE            :     1.0.0
+# RELEASE            :     1.1.0
 # USAGE SYNTAX       :     .\manager.sh
 #
 # SCRIPT DESCRIPTION :     This script is used to manage a reverse proxy configuration for nginx docker
@@ -14,6 +14,7 @@
 #
 #                 - RELEASE NOTES -
 # v1.0.0  2023.11.21 - Louis GAMBART - Initial version
+# v1.1.0  2024.02.27 - Louis GAMBART - Rework to follow base script
 #
 #==========================================================================================
 
@@ -27,7 +28,8 @@
 No_Color='\033[0m'      # No Color
 Red='\033[0;31m'        # Red
 Yellow='\033[0;33m'     # Yellow
-Green='\033[0;32m '     # Green
+Green='\033[0;32m'      # Green
+Blue='\033[0;34m'       # Blue
 
 
 ####################
@@ -37,7 +39,7 @@ Green='\033[0;32m '     # Green
 ####################
 
 NGINX_CONF_DIR=$NGINX_CONF_DIR_REPLACE
-NGINX_LOG_DIR=$NGINX_LOG_DIR_REPLACE
+NGINX_VAR_DIR=$NGINX_LOG_DIR_REPLACE
 NGINX_SSL_DIR=$NGINX_SSL_DIR_REPLACE
 SCRIPT_NAME="manager.sh"
 
@@ -55,23 +57,27 @@ add_service () {
     # :param $3: server ip
     # :param $4: is https
 
+    echo -e -n "\n${Yellow}Adding service $1 to reverse proxy...${No_Color}"
+
     # check if https
     if [ "$4" = 'y' ]; then
         service_type="https"
     elif [ "$4" = 'n' ]; then
         service_type="http"
     else
-        echo -e "${Red}Invalid input${No_Color}"
+        echo -e " ${Red} ERR - Invalid input for https/http${No_Color}"
         exit 1
     fi
 
     # create ssl certificate
-    Country=$(grep COUNTRY= "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
-    State=$(grep STATE= "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
-    Location=$(grep LOCATION= "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
-    Orga=$(grep ORG= "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
-    OrgaUnit=$(grep OU= "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
-    Days=$(grep DAYS= "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+    Country=$(grep COUNTRY "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+    State=$(grep STATE "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+    Location=$(grep LOCATION "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+    Orga=$(grep ORG "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+    OrgaUnit=$(grep OU "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+    Days=$(grep DAYS "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+    AllowOrigin=$(grep ALLOW-ORIGIN "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+
     {
         echo "[req]"
         echo "distinguished_name = req_distinguished_name"
@@ -95,7 +101,7 @@ add_service () {
     rm "$NGINX_SSL_DIR"/"$2".ext.cnf
 
     # create log dir
-    mkdir -p "$NGINX_LOG_DIR"/"$2"
+    mkdir -p "$NGINX_VAR_DIR"/"$2"
 
     # create conf file
     cat >> "$NGINX_CONF_DIR"/"$2".conf <<EOF
@@ -118,15 +124,15 @@ server {
 
     server_name $2;
 
-    error_log $NGINX_LOG_DIR/$2/error.log;
-    access_log $NGINX_LOG_DIR/$2/access.log;
+    error_log $NGINX_VAR_DIR/$2/error.log;
+    access_log $NGINX_VAR_DIR/$2/access.log;
 
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     add_header X-Frame-Options "SAMEORIGIN";
     add_header X-XSS-Protection "1; mode=block";
     add_header X-Content-Type-Options "nosniff";
     add_header Referrer-Policy "no-referrer";
-    add_header Access-Control-Allow-Origin "clubnix.fr";
+    add_header Access-Control-Allow-Origin "$AllowOrigin";
     add_header Cross-Origin-Embedder-Policy "require-corp";
     add_header Cross-Origin-Opener-Policy "same-origin";
     add_header Cross-Origin-Resource-Policy "same-site";
@@ -147,11 +153,12 @@ server {
     }
 }
 EOF
-    echo -e "${Green}Service $1 added to reverse proxy${No_Color}"
-    echo -e "${Yellow}Restarting nginx...${No_Color}"
-    nginx -s reload
-    echo -e "${Green}Done!${No_Color}"
-    echo "If you want to add options to the service, edit the file $NGINX_CONF_DIR/$2.conf"
+    echo -e "${Green} OK${No_Color}"
+    echo -e -n "${Yellow}Restarting nginx...${No_Color}"
+    systemctl restart nginx
+    echo -e "${Green} OK${No_Color}\n"
+    echo -e "If you want to add options to the service, use the following command: ${Blue}nano $NGINX_CONF_DIR/$2.conf${No_Color}"
+    echo -e "You can find the certificate and the private key in the following directory: ${Blue}$NGINX_SSL_DIR${No_Color}"
 }
 
 
@@ -160,28 +167,31 @@ remove_service () {
     # :param $1: server name
 
     # check if service exists
-    if [ ! -f "$NGINX_CONF_DIR"/"$1".conf ]; then
-        echo -e "${Red}Service does not exist${No_Color}"
+    echo -e -n "${Yellow}Checking if service exists...${No_Color}"
+
+    if [ ! -f $NGINX_CONF_DIR/"$1".conf ]; then
+        echo -e "${Red} Service does not exist${No_Color}"
         return
     fi
+    echo -e "${Green} OK${No_Color}"
 
     echo -e "${Yellow}You are about to remove the service $1 from the reverse proxy${No_Color}"
     read -r -p "Are you sure? [y/n] " removal_confirmation
     if [ "$removal_confirmation" = 'y' ]; then
         rm -rf "${NGINX_CONF_DIR:?}/$1".conf
-        rm -rf "${NGINX_LOG_DIR:?}/$1"
+        rm -rf "${NGINX_VAR_DIR:?}/$1"
         rm -rf "${NGINX_SSL_DIR:?}/$1".crt
         rm -rf "${NGINX_SSL_DIR:?}/$1".key
 
         echo -e "${Green}Service $1 removed from reverse proxy${No_Color}"
-        echo -e "${Yellow}Restarting nginx...${No_Color}"
+        echo -e -n "${Yellow}Restarting nginx...${No_Color}"
         nginx -s reload
-        echo -e "${Green}Done!${No_Color}"
+        echo -e "${Green} OK${No_Color}"
     elif [ "$removal_confirmation" = 'n' ]; then
         echo -e "${Green}Service $1 not removed from reverse proxy${No_Color}"
         return
     else
-        echo -e "${Red}Invalid input${No_Color}"
+        echo -e "${Red} ERR - Invalid input${No_Color}"
         return
     fi
 }
@@ -190,11 +200,14 @@ remove_service () {
 list_services () {
     # List all services in the reverse proxy
 
+    echo -e -n "\n${Yellow}Listing services...${No_Color}"
+
     for file in "$NGINX_CONF_DIR"/*.conf; do
         if [ ! -f "$file" ]; then
-            echo -e "${Red}No services found${No_Color}"
+            echo -e "${Red} No services found${No_Color}"
             exit 1
         fi
+        echo -e "${Green} OK${No_Color}"
         echo -e "${Green}$(basename "$file" .conf)${No_Color}"
         server_ip=$(pcregrep -o1 'proxy_pass http[s]?://([^/]*)(?!;)' "$file" | sed 's/;$//')
         echo -e "  IP: ${Green}$server_ip${No_Color}"
@@ -212,6 +225,12 @@ check_service () {
     else
         return 1
     fi
+}
+
+
+backup_nginx () {
+    # Backup nginx configuration
+    tar -czf ./nginx_backup.tar.gz /etc/nginx > /dev/null 2>&1
 }
 
 
@@ -260,7 +279,7 @@ print_version () {
     # Print version message
     echo -e """
     ${Green}
-    version       ${SCRIPT_NAME} 1.0.0
+    version       ${SCRIPT_NAME} 1.1.1
     author        Louis GAMBART (https://louis-gambart.fr)
     license       GNU GPLv3.0
     script_id     0
@@ -320,9 +339,10 @@ fi
 ########################
 
 PS3='Please enter your choice: '
-select option in "Add service" "Remove service" "List services" "Exit"; do
+select option in "Add service" "Remove service" "List services" "Backup nginx" "Exit"; do
     case $option in
         "Add service")
+            echo ""
             read -r -p "Enter server name like service.clubnix.fr: " server_name
             result=$(echo "$server_name" | pcregrep '(?=^.{1,254}$)(^(?>(?!\d+\.)[a-zA-Z0-9_\-]{1,63}\.?)+(?:[a-zA-Z]{2,})$)')
             if [[ -z "$server_name" ]]; then
@@ -346,9 +366,6 @@ select option in "Add service" "Remove service" "List services" "Exit"; do
             break
             ;;
         "Remove service")
-            #list services
-            echo -e "${Yellow}Listing services...${No_Color}"
-            echo ""
             list_services
             echo ""
             read -r -p "Enter server name to remove: " server_name
@@ -356,17 +373,21 @@ select option in "Add service" "Remove service" "List services" "Exit"; do
             break
             ;;
         "List services")
-            echo -e "${Yellow}Listing services...${No_Color}"
-            echo ""
             list_services
-            echo ""
+            break
+            ;;
+        "Backup nginx")
+            echo -e -n "\n${Yellow}Backing up nginx...${No_Color}"
+            backup_nginx
+            echo -e "${Green} OK${No_Color}"
             break
             ;;
         "Exit")
             break
             ;;
         *)
-            echo -e "${Red}Invalid option ${No_Color} $REPLY"
+            echo -e "${Red}Invalid option${No_Color} $REPLY"
+            break
             ;;
     esac
 done
