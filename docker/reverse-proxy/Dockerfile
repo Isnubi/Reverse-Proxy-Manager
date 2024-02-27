@@ -67,4 +67,4 @@ HEALTHCHECK --interval=30s --timeout=3s CMD curl --fail http://localhost/health.
 EXPOSE 80 443
 
 # Run nginx
-CMD ["/bin/bash", "-c", "/opt/watch_reload_nginx.sh & nginx -g 'daemon off;'"]
+CMD ["/bin/bash", "-c", "/opt/scripts/watch_reload_nginx.sh & nginx -g 'daemon off;'"]
