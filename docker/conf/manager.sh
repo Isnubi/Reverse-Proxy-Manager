@@ -73,8 +73,8 @@ add_service () {
     Country=$(grep COUNTRY "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
     State=$(grep STATE "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
     Location=$(grep LOCATION "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
-    Orga=$(grep ORG "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
-    OrgaUnit=$(grep OU "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+    Orga=$(grep ORGANIZATION-GLOBAL "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
+    OrgaUnit=$(grep ORGANIZATION-UNIT "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
     Days=$(grep DAYS "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
     AllowOrigin=$(grep ALLOW-ORIGIN "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
 
@@ -155,7 +155,7 @@ server {
 EOF
     echo -e "${Green} OK${No_Color}"
     echo -e -n "${Yellow}Restarting nginx...${No_Color}"
-    systemctl restart nginx
+    nginx -s reload
     echo -e "${Green} OK${No_Color}\n"
     echo -e "If you want to add options to the service, use the following command: ${Blue}nano $NGINX_CONF_DIR/$2.conf${No_Color}"
     echo -e "You can find the certificate and the private key in the following directory: ${Blue}$NGINX_SSL_DIR${No_Color}"
