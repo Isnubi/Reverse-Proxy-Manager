@@ -11,6 +11,7 @@ services:
         - SSL_ORG=My Organization
         - SSL_OU=My Department
         - SSL_DAYS=3650
+        - SSL_ALLOW_ORIGIN=*
     ports:
       - "80:80"
       - "443:443"

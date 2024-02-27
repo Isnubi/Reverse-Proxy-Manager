@@ -13,6 +13,7 @@ ARG SSL_CITY='San Francisco'
 ARG SSL_ORG='My Organization'
 ARG SSL_OU='My Department'
 ARG SSL_DAYS='3650'
+ARG SSL_ALLOW_ORIGIN='*'
 
 
 RUN # Install nginx \
@@ -20,13 +21,14 @@ RUN # Install nginx \
     # Install packages \
     apk add --no-cache nginx pcre-tools openssl curl && \
     # Install bash shell \
-    apk add --no-cache bash && \
+    apk add --no-cache bash openrc && \
     # Clean up \
-    rm -rf /var/cache/apk/*
-
-COPY ./conf/nginx.conf /etc/nginx/nginx.conf
-COPY ./conf/ssl.conf /etc/nginx/certs.conf
-COPY ./conf/manager.sh /root/manager.sh
+    rm -rf /var/cache/apk/* \
+        /etc/init.d/hwdrivers \
+        /etc/init.d/hwclock \
+        /etc/init.d/modules \
+        /etc/init.d/modules \
+        /etc/init.d/modules-load
 
 RUN # Configure nginx \
     mv "$NGINX_DIR"/nginx.conf "$NGINX_DIR/nginx.conf.bak" && \
@@ -36,19 +38,25 @@ RUN # Configure nginx \
     sed -i "s|\$NGINX_LOG_DIR|$NGINX_LOG_DIR|g" "$NGINX_DIR"/nginx.conf && \
     mkdir -p "$NGINX_SSL_DIR"
 RUN # Configure ssl \
-    wget -O "$NGINX_SSL_DIR"/ssl.conf https://raw.githubusercontent.com/ClubNix/Reverse-Proxy-Manager/master/docker/ssl.conf && \
+    wget -O "$NGINX_SSL_DIR"/ssl.conf https://raw.githubusercontent.com/ClubNix/Reverse-Proxy-Manager/master/docker/conf/ssl.conf && \
     sed -i "s|\$SSL_COUNTRY|$SSL_COUNTRY|g" "$NGINX_SSL_DIR"/ssl.conf && \
     sed -i "s|\$SSL_STATE|$SSL_STATE|g" "$NGINX_SSL_DIR"/ssl.conf && \
     sed -i "s|\$SSL_CITY|$SSL_CITY|g" "$NGINX_SSL_DIR"/ssl.conf && \
     sed -i "s|\$SSL_ORG|$SSL_ORG|g" "$NGINX_SSL_DIR"/ssl.conf && \
     sed -i "s|\$SSL_OU|$SSL_OU|g" "$NGINX_SSL_DIR"/ssl.conf && \
-    sed -i "s|\$SSL_DAYS|$SSL_DAYS|g" "$NGINX_SSL_DIR"/ssl.conf
+    sed -i "s|\$SSL_DAYS|$SSL_DAYS|g" "$NGINX_SSL_DIR"/ssl.conf \
+    sed -i "s|\$SSL_ALLOW_ORIGIN|$SSL_ALLOW_ORIGIN|g" "$NGINX_SSL_DIR"/ssl.conf
 RUN # Get manager script \
-    wget -O /root/manager.sh https://raw.githubusercontent.com/ClubNix/Reverse-Proxy-Manager/master/docker/manager.sh && \
+    wget -O /root/manager.sh https://raw.githubusercontent.com/ClubNix/Reverse-Proxy-Manager/master/docker/conf/manager.sh && \
     sed -i "s|\$NGINX_CONF_DIR_REPLACE|$NGINX_CONF_DIR|g" /root/manager.sh && \
     sed -i "s|\$NGINX_SSL_DIR_REPLACE|$NGINX_SSL_DIR|g" /root/manager.sh && \
     sed -i "s|\$NGINX_LOG_DIR_REPLACE|$NGINX_LOG_DIR|g" /root/manager.sh && \
     chmod +x /root/manager.sh
+
+RUN # Add nginx to runlevel \
+    rc-update add nginx default \
+    wget -O /root/entrypoint.sh https://raw.githubusercontent.com/ClubNix/Reverse-Proxy-Manager/master/docker/conf/entrypoint.sh && \
+    chmod +x /root/entrypoint.sh
 
 # Set working directory
 WORKDIR /root
@@ -60,4 +68,4 @@ HEALTHCHECK --interval=30s --timeout=3s CMD curl --fail http://localhost/health.
 EXPOSE 80 443
 
 # Run nginx
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["/root/entrypoint.sh"]
