@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Reverse Proxy Manager{% endblock %}
+{% block content %}
+<div class="starter-template text-center py-5 px-3">
+    <h1>Manage services</h1>
+    <br>
+        <form method="POST" class="row g-3 center-form">
+            <div class="col-auto">
+                <label for="conf" class="visually-hidden">Configuration</label>
+                <select id="conf" name="conf" class="form-control">
+                    <option selected>Choose...</option>
+                    {% for conf in conf_list %}
+                    <option value="{{ conf }}">{{ conf }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" name="action" value="view" class="btn btn-primary mb-3">View</button>
+                <button type="submit" name="action" value="delete" class="btn btn-primary mb-3">Delete</button>
+                <button type="submit" name="action" value="edit" class="btn btn-primary mb-3">Edit</button>
+            </div>
+        </form>
+
+        {% if conf_infos %}
+        <div>
+            {{ conf_infos}}
+        </div>
+        {% endif %}
+
+        {% if conf %}
+        <div>
+            <pre class="conf">{{ conf }}</pre>
+        </div>
+        {% endif %}
+
+        {% if conf_edit %}
+        <form method="POST">
+            <label for="new_conf">New configuration:</label><br>
+            <textarea id="new_conf" name="new_conf" rows="4" cols="50">{{ conf_edit }}</textarea><br>
+            <input type="hidden" name="conf_name" value="{{ conf_name }}">
+            <button type="submit" name="action" value="save" class="btn btn-primary mb-3">Save</button>
+        </form>
+        {% endif %}
+    <br>
+</div>
+{% endblock %}

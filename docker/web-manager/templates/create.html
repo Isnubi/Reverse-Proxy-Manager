@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Reverse Proxy Manager{% endblock %}
+{% block content %}
+<div class="starter-template text-center py-5 px-3">
+    <h1>Create service</h1>
+    <br>
+        <form method="POST" class="row g-3 center-form">
+            <div class="col-auto">
+                <label for="domain">Domain:</label><br>
+                <input type="text" id="domain" name="domain"><br>
+                <label for="server">Server:</label><br>
+                <input type="text" id="server" name="server"><br>
+                <label for="description">Description:</label><br>
+                <input type="text" id="description" name="description"><br>
+                <label for="service_type">Service Type:</label><br>
+                <select id="service_type" name="service_type">
+                    <option value="http">HTTP</option>
+                    <option value="https">HTTPS</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary mb-3">Submit</button>
+            </div>
+        </form>
+
+        {% if message %}
+        <div>
+            <p>{{ message }}</p>
+        </div>
+        {% endif %}
+    <br>
+</div>
+{% endblock %}
