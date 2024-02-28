@@ -71,13 +71,30 @@ class ReverseProxyManager:
                     conf[key.strip()] = value.strip()
         return conf
 
-    def edit_conf(self, conf_name: str, conf_content: str) -> None:
+    def edit_conf(self,
+                  conf_name: str,
+                  conf_content: str,
+                  cert_path: str = None,
+                  key_path: str = None) -> None:
         with open(f'{self.app_conf_path}/{conf_name}.conf', 'w') as f:
             f.write(conf_content.strip() + '\n')
+
+        if cert_path and key_path:
+            shutil.copy(cert_path, f'{self.app_ssl_path}/{conf_name}.crt')
+            shutil.copy(key_path, f'{self.app_ssl_path}/{conf_name}.key')
+            os.remove(cert_path)
+            os.remove(key_path)
+
         self.reload_nginx()
 
-    def create_conf(self, domain: str, server: str, description: str, service_type: str,
-                    allow_origin: str = '*') -> None:
+    def create_conf(self,
+                    domain: str,
+                    server: str,
+                    description: str,
+                    service_type: str,
+                    allow_origin: str = '*',
+                    cert_path: str = None,
+                    key_path: str = None) -> None:
         conf = rf"""
     map $http_upgrade $connection_upgrade {{
         default upgrade;
@@ -112,7 +129,8 @@ class ReverseProxyManager:
         add_header Cross-Origin-Resource-Policy "same-site";
 
         add_header Permissions-Policy ();
-        add_header Content-Security-Policy "default-src 'self'; img-src 'self' data: https: http:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'";
+        add_header Content-Security-Policy "default-src 'self'; img-src 'self' data: https: http:; script-src 'self' \
+        'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'";
 
         proxy_cookie_flags ~ secure httponly samesite=strict;
 
@@ -130,6 +148,15 @@ class ReverseProxyManager:
         os.makedirs(f'{self.app_log_path}/{domain}', exist_ok=True)
         with open(f'{self.app_conf_path}/{domain}.conf', 'w') as f:
             f.write(conf)
+
+        if cert_path and key_path:
+            shutil.copy(cert_path, f'{self.app_ssl_path}/{domain}.crt')
+            shutil.copy(key_path, f'{self.app_ssl_path}/{domain}.key')
+            os.remove(cert_path)
+            os.remove(key_path)
+        else:
+            self.generate_ssl(domain)
+
         self.reload_nginx()
 
     def generate_ssl(self, domain: str) -> None:
@@ -156,10 +183,11 @@ class ReverseProxyManager:
     DNS.1 = {domain}
     """)
             subprocess.run([
-                'openssl', 'req', '-new', '-newkey', 'rsa:4096', '-sha256', '-days', ssl_conf['DAYS'], '-nodes', '-x509',
-                '-keyout', f'{self.app_ssl_path}/{domain}.key',
+                'openssl', 'req', '-new', '-newkey', 'rsa:4096', '-sha256', '-days',
+                ssl_conf['DAYS'], '-nodes', '-x509', '-keyout', f'{self.app_ssl_path}/{domain}.key',
                 '-out', f'{self.app_ssl_path}/{domain}.crt',
-                '-subj', f"/C={ssl_conf['COUNTRY']}/ST={ssl_conf['STATE']}/L={ssl_conf['LOCATION']}/O={ssl_conf['ORGANIZATION-GLOBAL']}/OU={ssl_conf['ORGANIZATION-UNIT']}/CN={domain}",
+                '-subj', f"/C={ssl_conf['COUNTRY']}/ST={ssl_conf['STATE']}/L={ssl_conf['LOCATION']}"
+                         f"/O={ssl_conf['ORGANIZATION-GLOBAL']}/OU={ssl_conf['ORGANIZATION-UNIT']}/CN={domain}",
                 '-config', ext_cnf_path
             ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
             os.remove(ext_cnf_path)
@@ -175,6 +203,16 @@ class ReverseProxyManager:
         with tarfile.open(f'{self.app_scripts_path}/nginx.tar.gz', 'w:gz') as tar:
             tar.add(self.app_nginx_path, arcname=os.path.basename(self.app_nginx_path))
 
+    def handle_cert_key_upload(self, cert: Any, key: Any, conf_name: str) -> tuple[str, str]:
+        if cert and key:
+            tmp_cert_path = f'{self.app_scripts_path}/{conf_name}.crt'
+            tmp_key_path = f'{self.app_scripts_path}/{conf_name}.key'
+            cert.save(tmp_cert_path)
+            key.save(tmp_key_path)
+        else:
+            tmp_cert_path = tmp_key_path = None
+        return tmp_cert_path, tmp_key_path
+
 
 @bp.route('/manage', methods=['GET', 'POST'])
 def manage():
@@ -184,8 +222,13 @@ def manage():
         if 'new_conf' in request.form:
             new_conf = request.form['new_conf']
             conf_name = request.form['conf_name']
-            handler.edit_conf(conf_name, new_conf.replace('\r\n', '\n'))
-            conf_list = handler.get_conf_list()
+
+            cert = request.files['cert'] if 'cert' in request.files else None
+            key = request.files['key'] if 'key' in request.files else None
+            cert_path, key_path = handler.handle_cert_key_upload(cert, key, conf_name)
+
+            handler.edit_conf(conf_name, new_conf.replace('\r\n', '\n'), cert_path, key_path)
+
             return render_template('manage.html', conf_list=conf_list)
 
         action = request.form['action']
@@ -203,7 +246,8 @@ def manage():
             handler.remove_conf(conf_name)
             return render_template('manage.html', conf_list=conf_list)
         elif action == 'edit':
-            return render_template('manage.html', conf_list=conf_list, conf_edit=conf_content, conf_name=conf_name)
+            return render_template('manage.html', conf_list=conf_list,
+                                   conf_edit=conf_content, conf_name=conf_name)
     else:
         return render_template('manage.html', conf_list=conf_list)
 
@@ -211,6 +255,8 @@ def manage():
 @bp.route('/create', methods=['GET', 'POST'])
 def create():
     if request.method == 'POST':
+        handler = ReverseProxyManager()
+
         domain = request.form['domain']
         server = request.form['server']
         description = request.form['description']
@@ -218,17 +264,20 @@ def create():
         allow_origin = request.form['allow_origin']
 
         if domain == '' or server == '':
-            return render_template('create.html', message='Domain and server address are required', success=False)
+            return render_template('create.html',
+                                   message='Domain and server address are required', success=False)
         if allow_origin == '':
             allow_origin = '*'
 
-        handler = ReverseProxyManager()
+        cert = request.files['cert'] if 'cert' in request.files else None
+        key = request.files['key'] if 'key' in request.files else None
+        cert_path, key_path = handler.handle_cert_key_upload(cert, key, domain)
+
         if domain in handler.get_conf_list():
             return render_template('create.html', message='Domain already exists', success=False)
         if not handler.address_check(server):
             return render_template('create.html', message='Invalid server address', success=False)
-        handler.generate_ssl(domain)
-        handler.create_conf(domain, server, description, service_type, allow_origin)
+        handler.create_conf(domain, server, description, service_type, allow_origin, cert_path, key_path)
 
         return render_template('create.html', message='Configuration created', success=True)
     else:

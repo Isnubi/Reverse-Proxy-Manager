@@ -4,7 +4,7 @@
 <div class="starter-template text-center py-5 px-3">
     <h1>Create service</h1>
     <br>
-        <form method="POST" class="row g-3 center-form">
+        <form method="POST" enctype="multipart/form-data" class="row g-3 center-form">
             <div>
                 <label for="domain">Domain:</label><br>
                 <input type="text" id="domain" name="domain" placeholder="example.com"><br>
@@ -18,7 +18,11 @@
                 <select id="service_type" name="service_type">
                     <option value="http">HTTP</option>
                     <option value="https">HTTPS</option>
-                </select>
+                </select><br>
+                <label for="cert">Certificate:</label>
+                <input type="file" id="cert" name="cert" accept=".crt" placeholder="cert.crt"><br>
+                <label for="key">Key:</label>
+                <input type="file" id="key" name="key" accept=".key" placeholder="key.key"><br>
             </div>
             <div>
                 <button type="submit" class="btn btn-primary mb-3">Submit</button>

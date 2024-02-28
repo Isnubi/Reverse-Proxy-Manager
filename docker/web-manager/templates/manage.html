@@ -36,9 +36,13 @@
         {% endif %}
 
         {% if conf_edit %}
-        <form method="POST">
+        <form method="POST" enctype="multipart/form-data">
             <label for="new_conf">New configuration:</label><br>
             <textarea id="new_conf" name="new_conf" class="conf_edit">{{ conf_edit }}</textarea><br>
+            <label for="cert">Certificate:</label>
+            <input type="file" id="cert" name="cert" accept=".crt" placeholder="cert.crt"><br>
+            <label for="key">Key:</label>
+            <input type="file" id="key" name="key" accept=".key" placeholder="key.key"><br>
             <input type="hidden" name="conf_name" value="{{ conf_name }}"><br>
             <button type="submit" name="action" value="save" class="btn btn-primary mb-3">Save</button>
         </form>
