@@ -5,26 +5,28 @@
     <h1>Create service</h1>
     <br>
         <form method="POST" class="row g-3 center-form">
-            <div class="col-auto">
+            <div>
                 <label for="domain">Domain:</label><br>
-                <input type="text" id="domain" name="domain"><br>
+                <input type="text" id="domain" name="domain" placeholder="example.com"><br>
                 <label for="server">Server:</label><br>
-                <input type="text" id="server" name="server"><br>
+                <input type="text" id="server" name="server" placeholder="127.0.0.1:8080"><br>
                 <label for="description">Description:</label><br>
-                <input type="text" id="description" name="description"><br>
+                <input type="text" id="description" name="description" placeholder="My service"><br>
+                <label for="allow_origin">Allow Origin:</label><br>
+                <input type="text" id="allow_origin" name="allow_origin" placeholder="*"><br>
                 <label for="service_type">Service Type:</label><br>
                 <select id="service_type" name="service_type">
                     <option value="http">HTTP</option>
                     <option value="https">HTTPS</option>
                 </select>
             </div>
-            <div class="col-auto">
+            <div>
                 <button type="submit" class="btn btn-primary mb-3">Submit</button>
             </div>
         </form>
 
         {% if message %}
-        <div>
+        <div class="{% if success %}text-success{% else %}text-danger{% endif %}">
             <p>{{ message }}</p>
         </div>
         {% endif %}
