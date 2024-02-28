@@ -35,16 +35,6 @@ body {
     flex-flow: column;
 }
 
-.network_infos {
-    margin-top: 2rem;
-}
-.internet_status {
-    margin: 2rem;
-}
-.ping_infos {
-    margin: 1rem;
-}
-
 footer {
     min-height: 50px;
     position: relative;
