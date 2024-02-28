@@ -23,7 +23,9 @@
 
         {% if conf_infos %}
         <div>
-            {{ conf_infos}}
+            <p><strong>Name:</strong> {{ conf_infos.name }}</p>
+            <p><strong>Server Name:</strong> {{ conf_infos.server_name }}</p>
+            <p><strong>Server:</strong> {{ conf_infos.server }}</p>
         </div>
         {% endif %}
 
