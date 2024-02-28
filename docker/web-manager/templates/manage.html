@@ -36,8 +36,8 @@
         {% if conf_edit %}
         <form method="POST">
             <label for="new_conf">New configuration:</label><br>
-            <textarea id="new_conf" name="new_conf" rows="4" cols="50">{{ conf_edit }}</textarea><br>
-            <input type="hidden" name="conf_name" value="{{ conf_name }}">
+            <textarea id="new_conf" name="new_conf" class="conf_edit">{{ conf_edit }}</textarea><br>
+            <input type="hidden" name="conf_name" value="{{ conf_name }}"><br>
             <button type="submit" name="action" value="save" class="btn btn-primary mb-3">Save</button>
         </form>
         {% endif %}
