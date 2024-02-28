@@ -12,7 +12,6 @@ services:
         - SSL_ORGANIZATION_GLOBAL="My Organization"
         - SSL_ORGANIZATION_UNIT="My Department"
         - SSL_DAYS=3650
-        - SSL_ALLOW_ORIGIN="*" # or your domain
       dockerfile: Dockerfile
     ports:
       - "80:80"

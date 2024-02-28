@@ -56,6 +56,7 @@ add_service () {
     # :param $2: server name
     # :param $3: server ip
     # :param $4: is https
+    # :param $5: allow origin
 
     echo -e -n "\n${Yellow}Adding service $1 to reverse proxy...${No_Color}"
 
@@ -76,7 +77,6 @@ add_service () {
     Orga=$(grep ORGANIZATION-GLOBAL "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
     OrgaUnit=$(grep ORGANIZATION-UNIT "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
     Days=$(grep DAYS "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
-    AllowOrigin=$(grep ALLOW-ORIGIN "$NGINX_SSL_DIR/ssl.conf" | cut -d "=" -f2)
 
     {
         echo "[req]"
@@ -132,7 +132,7 @@ server {
     add_header X-XSS-Protection "1; mode=block";
     add_header X-Content-Type-Options "nosniff";
     add_header Referrer-Policy "no-referrer";
-    add_header Access-Control-Allow-Origin "$AllowOrigin";
+    add_header Access-Control-Allow-Origin "$5";
     add_header Cross-Origin-Embedder-Policy "require-corp";
     add_header Cross-Origin-Opener-Policy "same-origin";
     add_header Cross-Origin-Resource-Policy "same-site";
@@ -362,7 +362,9 @@ select option in "Add service" "Remove service" "List services" "Backup nginx" "
             fi
             read -r -p "Enter the service name: " service_name
             read -r -p "Is the service a https service? [y/n]: " https
-            add_service "$service_name" "$server_name" "$server_ip" "$https"
+            read -r -p "Enter the allow origin (if you don't know, enter *): " allow_origin
+
+            add_service "$service_name" "$server_name" "$server_ip" "$https" "$allow_origin"
             break
             ;;
         "Remove service")

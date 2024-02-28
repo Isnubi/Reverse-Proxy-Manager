@@ -13,7 +13,6 @@ ARG SSL_CITY='San Francisco'
 ARG SSL_ORGANIZATION_GLOBAL='My Organization'
 ARG SSL_ORGANIZATION_UNIT='My Department'
 ARG SSL_DAYS='3650'
-ARG SSL_ALLOW_ORIGIN='*'
 
 # Install nginx and other packages
 RUN apk update && \
@@ -46,8 +45,7 @@ RUN sed -i "s|\$SSL_COUNTRY|${SSL_COUNTRY//\"}|g" $NGINX_SSL_DIR/ssl.conf && \
     sed -i "s|\$SSL_CITY|${SSL_CITY//\"}|g" $NGINX_SSL_DIR/ssl.conf && \
     sed -i "s|\$SSL_ORGANIZATION_GLOBAL|${SSL_ORGANIZATION_GLOBAL//\"}|g" $NGINX_SSL_DIR/ssl.conf && \
     sed -i "s|\$SSL_ORGANIZATION_UNIT|${SSL_ORGANIZATION_UNIT//\"}|g" $NGINX_SSL_DIR/ssl.conf && \
-    sed -i "s|\$SSL_DAYS|${SSL_DAYS//\"}|g" $NGINX_SSL_DIR/ssl.conf && \
-    sed -i "s|\$SSL_ALLOW_ORIGIN|${SSL_ALLOW_ORIGIN//\"}|g" $NGINX_SSL_DIR/ssl.conf
+    sed -i "s|\$SSL_DAYS|${SSL_DAYS//\"}|g" $NGINX_SSL_DIR/ssl.conf
 
 # Get manager script
 RUN sed -i "s|\$NGINX_CONF_DIR_REPLACE|$NGINX_CONF_DIR|g" /opt/manager.sh && \
