@@ -72,3 +72,8 @@ footer a {
     height: 100%;
     min-height: 20rem;
 }
+
+.logs {
+    height: 20rem;
+    overflow: auto;
+}

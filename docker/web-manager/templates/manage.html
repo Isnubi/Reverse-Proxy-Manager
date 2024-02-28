@@ -18,6 +18,7 @@
                 <button type="submit" name="action" value="view" class="btn btn-primary mb-3">View</button>
                 <button type="submit" name="action" value="delete" class="btn btn-primary mb-3">Delete</button>
                 <button type="submit" name="action" value="edit" class="btn btn-primary mb-3">Edit</button>
+                <button type="submit" name="action" value="logs" class="btn btn-primary mb-3">Logs</button>
             </div>
         </form>
 
@@ -46,6 +47,16 @@
             <input type="hidden" name="conf_name" value="{{ conf_name }}"><br>
             <button type="submit" name="action" value="save" class="btn btn-primary mb-3">Save</button>
         </form>
+        {% endif %}
+
+        {% if logs %}
+        <div class="logs">
+            <pre>
+                {% for log in logs %}
+                {{ log|striptags }}
+                {% endfor %}
+            </pre>
+        </div>
         {% endif %}
     <br>
 </div>
