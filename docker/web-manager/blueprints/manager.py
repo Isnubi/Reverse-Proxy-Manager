@@ -243,6 +243,7 @@ def manage():
             return render_template('manage.html', conf_list=conf_list, conf_infos=conf_infos)
         elif action == 'delete':
             handler.remove_conf(conf_name)
+            conf_list = handler.get_conf_list()
             return render_template('manage.html', conf_list=conf_list)
         elif action == 'edit':
             return render_template('manage.html', conf_list=conf_list,
