@@ -48,16 +48,6 @@
             <button type="submit" name="action" value="save" class="btn btn-primary mb-3">Save</button>
         </form>
         {% endif %}
-
-        {% if logs %}
-        <div class="logs">
-            <pre>
-                {% for log in logs %}
-                {{ log|striptags }}
-                {% endfor %}
-            </pre>
-        </div>
-        {% endif %}
     <br>
 </div>
 {% endblock %}

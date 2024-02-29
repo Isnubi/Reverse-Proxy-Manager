@@ -1,4 +1,5 @@
-from flask import Blueprint, render_template, request, send_from_directory
+import flask
+from flask import Blueprint, render_template, request, send_from_directory, send_file
 import logging
 import os
 import subprocess
@@ -212,14 +213,6 @@ class ReverseProxyManager:
             tmp_cert_path = tmp_key_path = None
         return tmp_cert_path, tmp_key_path
 
-    def get_logs(self, conf_name: str) -> list[str]:
-        log_path = f'{self.app_log_path}/{conf_name}/access.log'
-        if not os.path.exists(log_path):
-            return ['No logs available']
-        with open(log_path, 'r') as f:
-            logs = f.readlines()[-50:]
-        return list(reversed(logs))
-
 
 @bp.route('/manage', methods=['GET', 'POST'])
 def manage():
@@ -257,8 +250,8 @@ def manage():
             return render_template('manage.html', conf_list=conf_list,
                                    conf_edit=conf_content, conf_name=conf_name)
         elif action == 'logs':
-            logs = handler.get_logs(conf_name)
-            return render_template('manage.html', conf_list=conf_list, logs=logs)
+            return send_file(f'{handler.app_log_path}/{conf_name}/access.log',
+                             download_name=f'{conf_name}.access.log', as_attachment=True)
     else:
         return render_template('manage.html', conf_list=conf_list)
 
