@@ -47,7 +47,7 @@ class ReverseProxyManager:
         conf_list = []
         for conf in os.listdir(self.app_conf_path):
             conf_list.append(conf[:-5])
-        return conf_list
+        return sorted(conf_list)
 
     def get_conf(self, conf_name: str) -> str:
         with open(f'{self.app_conf_path}/{conf_name}.conf', 'r') as f:
