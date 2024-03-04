@@ -13,7 +13,7 @@ bp = Blueprint('manager', __name__, url_prefix='/manager')
 
 
 class ReverseProxyManager:
-    def __init__(self):
+    def __init__(self) -> None:
         self.real_conf_path = '/etc/nginx/conf.d'
         self.real_ssl_path = '/etc/nginx/certs'
         self.real_log_path = '/var/log/nginx'
@@ -215,7 +215,7 @@ class ReverseProxyManager:
 
 
 @bp.route('/manage', methods=['GET', 'POST'])
-def manage():
+def manage() -> str | flask.Response:
     handler = ReverseProxyManager()
     conf_list = handler.get_conf_list()
     if request.method == 'POST':
@@ -257,7 +257,7 @@ def manage():
 
 
 @bp.route('/create', methods=['GET', 'POST'])
-def create():
+def create() -> str:
     if request.method == 'POST':
         handler = ReverseProxyManager()
 
@@ -289,7 +289,7 @@ def create():
 
 
 @bp.route('/backup', methods=['GET'])
-def backup():
+def backup() -> flask.Response:
     handler = ReverseProxyManager()
     handler.backup_nginx()
     return send_from_directory(directory=f'{handler.app_scripts_path}', path='nginx.tar.gz', as_attachment=True)
