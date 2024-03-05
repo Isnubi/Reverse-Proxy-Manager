@@ -7,6 +7,8 @@ from typing import Dict, Any
 import shutil
 import re
 import tarfile
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 
 logger = logging.getLogger(__name__)
 bp = Blueprint('manager', __name__, url_prefix='/manager')
@@ -56,10 +58,20 @@ class ReverseProxyManager:
     def get_conf_infos(self, conf_name: str) -> Dict[str, Any]:
         with open(f'{self.app_conf_path}/{conf_name}.conf', 'r') as f:
             conf = f.read()
+        with open(f'{self.app_ssl_path}/{conf_name}.crt', 'rb') as f:
+            crt = f.read()
+            crt = x509.load_pem_x509_certificate(crt, default_backend())
         infos = {
             'name': conf_name,
             'server_name': conf.split('server_name ')[1].split(';')[0],
-            'server': conf.split('proxy_pass ')[1].split(';')[0]
+            'server': conf.split('proxy_pass ')[1].split(';')[0],
+            'certificate': {
+                'subject': crt.subject.rfc4514_string(),
+                'issuer': crt.issuer.rfc4514_string(),
+                'serial_number': crt.serial_number,
+                'not_valid_before': crt.not_valid_before_utc,
+                'not_valid_after': crt.not_valid_after_utc
+            }
         }
         return infos
 
