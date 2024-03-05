@@ -1,8 +1,12 @@
 .center-form {
     display: flex;
     justify-content: center;
-    align-items: center;
-    margin: 2rem;
+}
+.center-form > select {
+    margin: 0 15px;
+}
+.center-form > .btn {
+    height: 100%;
 }
 
 .create-form input {

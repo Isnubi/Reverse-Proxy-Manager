@@ -5,7 +5,7 @@
     <h1>Manage services</h1>
     <br>
         <form method="POST" class="row g-3 center-form">
-            <div class="col-auto">
+            <div class="col-auto center-form">
                 <label for="conf" class="visually-hidden">Configuration</label>
                 <select id="conf" name="conf" class="form-control">
                     <option selected>Choose...</option>
@@ -13,8 +13,6 @@
                     <option value="{{ conf }}">{{ conf }}</option>
                     {% endfor %}
                 </select>
-            </div>
-            <div class="col-auto">
                 <button type="submit" name="action" value="view" class="btn btn-primary mb-3">View</button>
                 <button type="submit" name="action" value="delete" class="btn btn-primary mb-3">Delete</button>
                 <button type="submit" name="action" value="edit" class="btn btn-primary mb-3">Edit</button>
