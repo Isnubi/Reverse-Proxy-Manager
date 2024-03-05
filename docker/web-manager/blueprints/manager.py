@@ -78,7 +78,7 @@ class ReverseProxyManager:
                   cert_path: str = None,
                   key_path: str = None) -> None:
         with open(f'{self.app_conf_path}/{conf_name}.conf', 'w') as f:
-            f.write(conf_content.strip() + '\n')
+            f.write(conf_content.replace('\r\n', '\n').strip() + '\n')
 
         if cert_path and key_path:
             shutil.copy(cert_path, f'{self.app_ssl_path}/{conf_name}.crt')
@@ -203,12 +203,25 @@ class ReverseProxyManager:
         with tarfile.open(f'{self.app_scripts_path}/nginx.tar.gz', 'w:gz') as tar:
             tar.add(self.app_nginx_path, arcname=os.path.basename(self.app_nginx_path))
 
-    def handle_cert_key_upload(self, cert: Any, key: Any, conf_name: str) -> tuple[str, str]:
-        if cert and key:
-            tmp_cert_path = f'{self.app_scripts_path}/{conf_name}.crt'
-            tmp_key_path = f'{self.app_scripts_path}/{conf_name}.key'
+    def handle_cert_key_upload(self, conf_name: str, form_request: flask.Request) -> tuple[Any, Any]:
+        cert = form_request.files['cert'] if 'cert' in form_request.files else None
+        key = form_request.files['key'] if 'key' in form_request.files else None
+        cert_text = form_request.form['cert_text'] if 'cert_text' in form_request.form else None
+        key_text = form_request.form['key_text'] if 'key_text' in form_request.form else None
+
+        tmp_cert_path = f'{self.app_scripts_path}/{conf_name}.crt'
+        tmp_key_path = f'{self.app_scripts_path}/{conf_name}.key'
+
+        if (not cert and key) or (not cert_text and key_text):
+            tmp_cert_path = tmp_key_path = None
+        elif cert and key:
             cert.save(tmp_cert_path)
             key.save(tmp_key_path)
+        elif cert_text and key_text:
+            with open(tmp_cert_path, 'w') as f:
+                f.write(cert_text)
+            with open(tmp_key_path, 'w') as f:
+                f.write(key_text)
         else:
             tmp_cert_path = tmp_key_path = None
         return tmp_cert_path, tmp_key_path
@@ -223,11 +236,8 @@ def manage() -> str | flask.Response:
             new_conf = request.form['new_conf']
             conf_name = request.form['conf_name']
 
-            cert = request.files['cert'] if 'cert' in request.files else None
-            key = request.files['key'] if 'key' in request.files else None
-            cert_path, key_path = handler.handle_cert_key_upload(cert, key, conf_name)
-
-            handler.edit_conf(conf_name, new_conf.replace('\r\n', '\n'), cert_path, key_path)
+            cert_path, key_path = handler.handle_cert_key_upload(conf_name, request)
+            handler.edit_conf(conf_name, new_conf, cert_path, key_path)
 
             return render_template('manage.html', conf_list=conf_list)
 
@@ -273,9 +283,7 @@ def create() -> str:
         if allow_origin == '':
             allow_origin = '*'
 
-        cert = request.files['cert'] if 'cert' in request.files else None
-        key = request.files['key'] if 'key' in request.files else None
-        cert_path, key_path = handler.handle_cert_key_upload(cert, key, domain)
+        cert_path, key_path = handler.handle_cert_key_upload(domain, request)
 
         if domain in handler.get_conf_list():
             return render_template('create.html', message='Domain already exists', success=False)
