@@ -1,44 +1,44 @@
 version: '3.8'
 
 services:
-  reverse-proxy:
-    container_name: reverse-proxy
-    build:
-      context: ./reverse-proxy
-      args:
-        - SSL_COUNTRY="US"
-        - SSL_STATE="California"
-        - SSL_CITY="San Francisco"
-        - SSL_ORGANIZATION_GLOBAL="My Organization"
-        - SSL_ORGANIZATION_UNIT="My Department"
-        - SSL_DAYS=3650
-      dockerfile: Dockerfile
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - logs:/var/log/nginx
-      - conf:/etc/nginx/conf.d
-      - certs:/etc/nginx/certs
-      - scripts:/opt/scripts
-    restart: unless-stopped
+	reverse-proxy:
+		container_name: reverse-proxy
+		build:
+			context: ./reverse-proxy
+			args:
+				- SSL_COUNTRY="US"
+				- SSL_STATE="California"
+				- SSL_CITY="San Francisco"
+				- SSL_ORGANIZATION_GLOBAL="My Organization"
+				- SSL_ORGANIZATION_UNIT="My Department"
+				- SSL_DAYS=3650
+			dockerfile: Dockerfile
+		ports:
+			- "80:80"
+			- "443:443"
+		volumes:
+			- logs:/var/log/nginx
+			- conf:/etc/nginx/conf.d
+			- certs:/etc/nginx/certs
+			- scripts:/opt/scripts
+		restart: unless-stopped
 
-  web-manager:
-    container_name: web-manager
-    build:
-      context: ./web-manager
-      dockerfile: Dockerfile
-    ports:
-      - "5000:5000"
-    volumes:
-      - logs:/app/nginx/logs
-      - conf:/app/nginx/conf.d
-      - certs:/app/nginx/certs
-      - scripts:/app/scripts
-    restart: unless-stopped
+	web-manager:
+		container_name: web-manager
+		build:
+			context: ./web-manager
+			dockerfile: Dockerfile
+		ports:
+			- "8000:8000"
+		volumes:
+			- logs:/app/nginx/logs
+			- conf:/app/nginx/conf.d
+			- certs:/app/nginx/certs
+			- scripts:/app/scripts
+		restart: unless-stopped
 
 volumes:
-  logs:
-  conf:
-  certs:
-  scripts:
+	logs:
+	conf:
+	certs:
+	scripts:
