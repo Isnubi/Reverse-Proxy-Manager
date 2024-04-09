@@ -9,9 +9,31 @@ import re
 import tarfile
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
+import logging
 
-logger = logging.getLogger(__name__)
+
+def handle_logs(logger_name, log_file_name):
+    # Create a logger
+    logger = logging.getLogger(logger_name)
+
+    # Set the level of the logger. This can be DEBUG, INFO, WARNING, ERROR, CRITICAL.
+    logger.setLevel(logging.DEBUG)
+
+    # Create a file handler
+    handler = logging.FileHandler(f"/app/logs/{log_file_name}")
+
+    # Create a formatter and add it to the handler
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+
+    # Add the handler to the logger
+    logger.addHandler(handler)
+
+    return logger
+
+
 bp = Blueprint('manager', __name__, url_prefix='/manager')
+logger = handle_logs('web_manager', 'web_manager.log')
 
 
 class ReverseProxyManager:
@@ -29,6 +51,7 @@ class ReverseProxyManager:
     def reload_nginx(self) -> None:
         with open(f'{self.app_scripts_path}/reload_nginx', 'w') as f:
             f.write('reload')
+        logger.info('Reloading Nginx')
 
     def address_check(self, server: str) -> bool:
         if ':' in server:
@@ -98,6 +121,7 @@ class ReverseProxyManager:
             os.remove(cert_path)
             os.remove(key_path)
 
+        logger.info(f'Configuration {conf_name} edited')
         self.reload_nginx()
 
     def create_conf(self,
@@ -169,6 +193,7 @@ class ReverseProxyManager:
         else:
             self.generate_ssl(domain)
 
+        logger.info(f"Configuration {domain} created")
         self.reload_nginx()
 
     def generate_ssl(self, domain: str) -> None:
@@ -204,16 +229,22 @@ class ReverseProxyManager:
             ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
             os.remove(ext_cnf_path)
 
+            logger.info(f"SSL certificate for {domain} generated")
+
     def remove_conf(self, conf_name: str) -> None:
         os.remove(f'{self.app_conf_path}/{conf_name}.conf')
         os.remove(f'{self.app_ssl_path}/{conf_name}.crt')
         os.remove(f'{self.app_ssl_path}/{conf_name}.key')
         shutil.rmtree(f'{self.app_log_path}/{conf_name}', ignore_errors=True)
+
+        logger.info(f"Configuration {conf_name} removed")
         self.reload_nginx()
 
     def backup_nginx(self) -> None:
         with tarfile.open(f'{self.app_scripts_path}/nginx.tar.gz', 'w:gz') as tar:
             tar.add(self.app_nginx_path, arcname=os.path.basename(self.app_nginx_path))
+
+        logger.info('Nginx configuration backed up')
 
     def handle_cert_key_upload(self, conf_name: str, form_request: flask.Request) -> tuple[Any, Any]:
         cert = form_request.files['cert'] if 'cert' in form_request.files else None
