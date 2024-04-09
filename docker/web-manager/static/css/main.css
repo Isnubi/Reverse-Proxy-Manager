@@ -54,5 +54,6 @@ footer a {
     flex: 1;
 }
 
-
-
+.text-main {
+    color: var(--text-color);
+}

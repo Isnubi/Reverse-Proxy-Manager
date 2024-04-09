@@ -251,6 +251,9 @@ def manage() -> str | flask.Response:
             cert_path, key_path = handler.handle_cert_key_upload(conf_name, request)
             handler.edit_conf(conf_name, new_conf, cert_path, key_path)
 
+            if 'renew' in request.form:
+                handler.generate_ssl(conf_name)
+
             return render_template('manage.html', conf_list=conf_list)
 
         action = request.form['action']
