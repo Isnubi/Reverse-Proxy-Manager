@@ -54,7 +54,10 @@ RUN sed -i "s|\$NGINX_CONF_DIR_REPLACE|$NGINX_CONF_DIR|g" /opt/manager.sh && \
     sed -i "s|\$NGINX_LOG_DIR_REPLACE|$NGINX_LOG_DIR|g" /opt/manager.sh && \
     chmod +x /opt/manager.sh && \
     chmod +x /opt/scripts/watch_reload_nginx.sh && \
-    touch /opt/scripts/reload_nginx
+    chmod +x /opt/scripts/watch_conf_check.sh && \
+    touch /opt/scripts/reload_nginx && \
+    touch /opt/scripts/check_conf && \
+    touch /opt/scripts/check_conf_status
 
 # Set working directory
 WORKDIR /opt
