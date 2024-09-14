@@ -33,6 +33,7 @@ COPY ./conf/nginx.conf $NGINX_DIR/nginx.conf
 COPY ./conf/ssl.conf $NGINX_SSL_DIR/ssl.conf
 COPY ./conf/manager.sh /opt/manager.sh
 COPY ./conf/watch_reload_nginx.sh /opt/scripts/watch_reload_nginx.sh
+COPY ./conf/watch_conf_check.sh /opt/scripts/watch_conf_check.sh
 
 # Configure nginx
 RUN sed -i "s|\$NGINX_DIR|$NGINX_DIR|g" $NGINX_DIR/nginx.conf && \
@@ -65,4 +66,4 @@ HEALTHCHECK --interval=30s --timeout=3s CMD curl --fail http://localhost/health.
 EXPOSE 80 443
 
 # Run nginx
-CMD ["/bin/bash", "-c", "/opt/scripts/watch_reload_nginx.sh & nginx -g 'daemon off;'"]
+CMD ["/bin/bash", "-c", "/opt/scripts/watch_reload_nginx.sh & /opt/scripts/watch_conf_check.sh & nginx -g 'daemon off;'"]

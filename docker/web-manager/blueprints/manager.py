@@ -10,6 +10,7 @@ import tarfile
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 import logging
+import time
 
 
 def handle_logs(logger_name, log_file_name):
@@ -48,10 +49,24 @@ class ReverseProxyManager:
         self.app_nginx_path = '/app/nginx'
         self.ip_pattern = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
 
-    def reload_nginx(self) -> None:
-        with open(f'{self.app_scripts_path}/reload_nginx', 'w') as f:
-            f.write('reload')
-        logger.info('Reloading Nginx')
+    def reload_nginx(self) -> tuple[bool, str]:
+        with open(f'{self.app_scripts_path}/check_conf', 'w') as f:
+            f.write('check')
+
+        time.sleep(1)
+
+        with open(f'{self.app_scripts_path}/check_conf_status', 'r') as f:
+            return_code = f.readline().strip()
+
+            if return_code != '0':
+                error = f.read().strip()
+                logger.error(f'Configuration check failed: {error}')
+                return False, error
+            else:
+                with open(f'{self.app_scripts_path}/reload_nginx', 'w') as f:
+                    f.write('reload')
+                logger.info('Reloading Nginx')
+                return True, 'OK'
 
     def address_check(self, server: str) -> bool:
         if ':' in server:
@@ -122,7 +137,6 @@ class ReverseProxyManager:
             os.remove(key_path)
 
         logger.info(f'Configuration {conf_name} edited')
-        self.reload_nginx()
 
     def create_conf(self,
                     domain: str,
@@ -194,7 +208,6 @@ class ReverseProxyManager:
             self.generate_ssl(domain)
 
         logger.info(f"Configuration {domain} created")
-        self.reload_nginx()
 
     def generate_ssl(self, domain: str) -> None:
         ssl_conf = self.get_ssl_conf()
@@ -281,11 +294,14 @@ def manage() -> str | flask.Response:
 
             cert_path, key_path = handler.handle_cert_key_upload(conf_name, request)
             handler.edit_conf(conf_name, new_conf, cert_path, key_path)
+            check, status = handler.reload_nginx()
+            if not check:
+                return render_template('manage.html', conf_list=conf_list, message='Failed to reload Nginx, error in configuration', error=status, success=False, conf_edit=new_conf, conf_name=conf_name)
 
             if 'renew' in request.form:
                 handler.generate_ssl(conf_name)
 
-            return render_template('manage.html', conf_list=conf_list)
+            return render_template('manage.html', conf_list=conf_list, message='Configuration edited', success=True)
 
         action = request.form['action']
         conf_name = request.form['conf']
@@ -301,7 +317,7 @@ def manage() -> str | flask.Response:
         elif action == 'delete':
             handler.remove_conf(conf_name)
             conf_list = handler.get_conf_list()
-            return render_template('manage.html', conf_list=conf_list)
+            return render_template('manage.html', conf_list=conf_list, message='Configuration removed', success=True)
         elif action == 'edit':
             return render_template('manage.html', conf_list=conf_list,
                                    conf_edit=conf_content, conf_name=conf_name)
@@ -336,6 +352,9 @@ def create() -> str:
         if not handler.address_check(server):
             return render_template('create.html', message='Invalid server address', success=False)
         handler.create_conf(domain, server, description, service_type, allow_origin, cert_path, key_path)
+        check, status = handler.reload_nginx()
+        if not check:
+            return render_template('create.html', message='Configuration created but failed to reload Nginx, check error in conf', error=status, success=False)
 
         return render_template('create.html', message='Configuration created', success=True)
     else:
