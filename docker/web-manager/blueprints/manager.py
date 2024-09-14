@@ -165,7 +165,7 @@ class ReverseProxyManager:
         add_header Cross-Origin-Opener-Policy "same-origin";
         add_header Cross-Origin-Resource-Policy "same-site";
 
-        add_header Permissions-Policy ();
+        # add_header Permissions-Policy ();
         add_header Content-Security-Policy "default-src 'self'; img-src 'self' data: https: http:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'";
 
         proxy_cookie_flags ~ secure httponly samesite=strict;
