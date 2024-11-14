@@ -3,13 +3,6 @@ services:
     container_name: reverse-proxy
     build:
       context: ./reverse-proxy
-      args:
-        - SSL_COUNTRY="US"
-        - SSL_STATE="California"
-        - SSL_CITY="San Francisco"
-        - SSL_ORGANIZATION_GLOBAL="My Organization"
-        - SSL_ORGANIZATION_UNIT="My Department"
-        - SSL_DAYS=3650
       dockerfile: Dockerfile
     ports:
       - 80:80
@@ -26,6 +19,13 @@ services:
     build:
       context: ./web-manager
       dockerfile: Dockerfile
+    environment:
+      - SSL_COUNTRY=FR
+      - SSL_STATE=France
+      - SSL_CITY=Noisy-le-Grand
+      - SSL_ORGANIZATION_GLOBAL=ESIEE Paris
+      - SSL_ORGANIZATION_UNIT=Club*Nix
+      - SSL_DAYS=365
     ports:
       - 5000:5000
     volumes:

@@ -48,6 +48,14 @@ class ReverseProxyManager:
         self.app_scripts_path = '/app/scripts'
         self.app_nginx_path = '/app/nginx'
         self.ip_pattern = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
+        self.ssl_conf = {
+            'COUNTRY': os.getenv('SSL_COUNTRY', 'US'),
+            'STATE': os.getenv('SSL_STATE', 'California'),
+            'LOCATION': os.getenv('SSL_CITY', 'Los Angeles'),
+            'ORGANIZATION-GLOBAL': os.getenv('SSL_ORGANIZATION_GLOBAL', 'Company'),
+            'ORGANIZATION-UNIT': os.getenv('SSL_ORGANIZATION_UNIT', 'IT'),
+            'DAYS': os.getenv('SSL_DAYS', '365')
+        }
 
     def reload_nginx(self) -> tuple[bool, str]:
         with open(f'{self.app_scripts_path}/check_conf', 'w') as f:
@@ -112,15 +120,6 @@ class ReverseProxyManager:
             }
         }
         return infos
-
-    def get_ssl_conf(self) -> Dict[str, str]:
-        conf = {}
-        with open(f'{self.app_ssl_path}/ssl.conf', 'r') as f:
-            for line in f.readlines():
-                if '=' in line:
-                    key, value = line.split('=')
-                    conf[key.strip()] = value.strip()
-        return conf
 
     def edit_conf(self,
                   conf_name: str,
@@ -210,7 +209,7 @@ class ReverseProxyManager:
         logger.info(f"Configuration {domain} created")
 
     def generate_ssl(self, domain: str) -> None:
-        ssl_conf = self.get_ssl_conf()
+        ssl_conf = self.ssl_conf
 
         ext_cnf_path = f'{self.app_ssl_path}/{domain}.ext.cnf'
         with open(ext_cnf_path, 'w') as f:
@@ -232,14 +231,16 @@ class ReverseProxyManager:
     [alt_names]
     DNS.1 = {domain}
     """)
-            subprocess.run([
-                'openssl', 'req', '-new', '-newkey', 'rsa:4096', '-sha256', '-days',
-                ssl_conf['DAYS'], '-nodes', '-x509', '-keyout', f'{self.app_ssl_path}/{domain}.key',
-                '-out', f'{self.app_ssl_path}/{domain}.crt',
-                '-subj', f"/C={ssl_conf['COUNTRY']}/ST={ssl_conf['STATE']}/L={ssl_conf['LOCATION']}"
-                         f"/O={ssl_conf['ORGANIZATION-GLOBAL']}/OU={ssl_conf['ORGANIZATION-UNIT']}/CN={domain}",
-                '-config', ext_cnf_path
-            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+            try:
+                process = subprocess.run([
+                    'openssl', 'req', '-new', '-newkey', 'rsa:4096', '-sha256', '-days',
+                    ssl_conf['DAYS'], '-nodes', '-x509', '-keyout', f'{self.app_ssl_path}/{domain}.key',
+                    '-out', f'{self.app_ssl_path}/{domain}.crt',
+                    '-subj', f"/C={ssl_conf['COUNTRY']}/ST={ssl_conf['STATE']}/L={ssl_conf['LOCATION']}/O={ssl_conf['ORGANIZATION-GLOBAL']}/OU={ssl_conf['ORGANIZATION-UNIT']}/CN={domain}",
+                    '-config', ext_cnf_path
+                ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Failed to generate SSL certificate for {domain}: {e}")
             os.remove(ext_cnf_path)
 
             logger.info(f"SSL certificate for {domain} generated")
